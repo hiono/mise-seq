@@ -1,0 +1,53 @@
+# tools.yaml (example)
+
+defaults:
+  preinstall:
+    - description: "Show execution order (begin)"
+      run: |
+        set -eu
+        echo "[defaults.preinstall] begin"
+        echo "[defaults.preinstall] date=$(date -Is)"
+
+  postinstall:
+    - description: "Show execution order (end)"
+      run: |
+        set -eu
+        echo "[defaults.postinstall] end"
+        echo "[defaults.postinstall] date=$(date -Is)"
+
+tools_order:
+  - jq
+  - lazygit
+
+tools:
+  jq:
+    version: latest
+    exe: jq
+    preinstall:
+      - when: [install, update]
+        description: "Before installing/updating jq"
+        run: |
+          set -eu
+          echo "[jq.preinstall]"
+    postinstall:
+      - when: [install, update]
+        description: "After installing/updating jq"
+        run: |
+          set -eu
+          jq --version || true
+
+  lazygit:
+    version: latest
+    exe: lazygit
+    preinstall:
+      - when: [install, update]
+        description: "Before installing/updating lazygit"
+        run: |
+          set -eu
+          echo "[lazygit.preinstall]"
+    postinstall:
+      - when: [install, update]
+        description: "After installing/updating lazygit"
+        run: |
+          set -eu
+          lazygit --version || true
