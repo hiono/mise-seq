@@ -28,17 +28,11 @@ package miseseq
   postinstall?: #HookList
 })
 
-#MiseSeqConfig: close({
+#MiseSeqConfig: {
   defaults?:    #Defaults
-  tools_order?: [...string & =~#ToolKeyPattern]
+  tools_order?: [...string]
 
   tools: {
-    [=~#ToolKeyPattern]: #ToolConfig
+    [string]: #ToolConfig
   }
-
-  if tools_order != _|_ {
-    for t in tools_order {
-      tools[t]: _,
-    }
-  }
-})
+}
