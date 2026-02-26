@@ -38,8 +38,10 @@ require_cmd() {
 }
 
 require_cmd mise
+echo "=== After require_cmd mise ===" >&2
 log_debug "Checking mise command..."
 mkdir -p "$STATE_DIR"
+echo "=== After mkdir STATE_DIR ===" >&2
 
 MISE_SHIMS_DEFAULT="${HOME}/.local/share/mise/shims"
 MISE_DATA_DIR="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
