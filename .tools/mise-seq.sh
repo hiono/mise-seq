@@ -64,6 +64,10 @@ echo "=== Starting mise-seq ===" >&2
 echo "=== Checking for cue ===" >&2
 
 if ! command -v cue >/dev/null 2>&1; then
+	echo "=== Running mise install ===" >&2
+	log_info "Running mise install to install tools from config..."
+	run mise install >/dev/null 2>&1 || true
+
 	echo "=== Installing cue ===" >&2
 	log_info "Installing bootstrap: cue@${CUE_VERSION}"
 	run mise use -g "cue@${CUE_VERSION}" >/dev/null
