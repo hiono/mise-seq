@@ -1,88 +1,24 @@
-# mise-seq configuration (TOML example)
-# TOML advantages over YAML:
-# - No indentation errors
-# - Native datetime, boolean types  
-# - Arrays of tables (clearer than YAML lists)
-# - No ambiguous multiline strings
+# tools.toml (minimal example - TOML advantages)
+# No indentation errors, native types, clean syntax
 
-tools_order = ["jq", "lazygit", "gh"]
+tools_order = ["uv", "bun", "rust"]
 
 [defaults]
-[[defaults.preinstall]]
-description = "Environment validation"
-when = ["install", "update"]
-run = '''
-set -eu
-echo "[preinstall] Starting at $(date -Iseconds)"
-echo "[preinstall] TOOLS_DIR=$TOOLS_DIR"
-'''
-
 [[defaults.postinstall]]
-description = "Final summary"
-when = ["install", "update"]
+description = "Summary"
 run = '''
-set -eu
-echo "[postinstall] Completed at $(date -Iseconds)"
-echo "[postinstall] Tools installed:"
+echo "=== Installed tools ==="
 ls -la "$TOOLS_DIR"/*.sh 2>/dev/null || true
 '''
 
-[tools.jq]
+[tools.uv]
 version = "latest"
-exe = "jq"
+exe = "uv"
 
-[[tools.jq.preinstall]]
-when = ["install", "update"]
-description = "Pre-check jq"
-run = '''
-set -eu
-echo "[jq.preinstall] Checking prerequisites..."
-'''
-
-[[tools.jq.postinstall]]
-when = ["install", "update"]
-description = "Verify jq installation"
-run = '''
-set -eu
-jq --version
-echo "[jq.postinstall] Installed successfully"
-'''
-
-[tools.lazygit]
+[tools.bun]
 version = "latest"
-exe = "lazygit"
+exe = "bun"
 
-[[tools.lazygit.postinstall]]
-when = ["install"]
-description = "Configure lazygit"
-run = '''
-set -eu
-mkdir -p ~/.config/lazygit
-echo "[lazygit] Configured"
-'''
-
-[tools.gh]
+[tools.rust]
 version = "latest"
-exe = "gh"
-
-[[tools.gh.postinstall]]
-when = ["install"]
-description = "GitHub CLI auth status"
-run = '''
-set -eu
-gh auth status 2>/dev/null || echo "gh not authenticated"
-echo "[gh] Ready"
-'''
-
-[tools."npm:@anthropic-ai/claude-code"]
-version = "latest"
-exe = "claude"
-
-[[tools."npm:@anthropic-ai/claude-code".postinstall]]
-when = ["install"]
-description = "Setup Claude Code"
-run = '''
-set -eu
-claude --version
-echo "[claude-code] Setup complete"
-'''
+exe = "rust"
