@@ -1,53 +1,48 @@
 # mise-seq
 
-**mise-seq** is a **sequential installer** built on top of a
-system-installed `mise`.
+mise-seq is a sequential installer that operates on top of a system-installed
+`mise`.
 
-It exists for one reason:
-
-> **Use `curl | sh` to install tools sequentially with your own
-> `tools.yaml`.**
+It provides a mechanism to install developer tools one by one using a user-defined
+configuration file (`tools.yaml`).
 
 ---
 
-## Quick Install (use your own `tools.yaml`)
+## Quick start
 
-### Use a local `tools.yaml`
+### Using a local `tools.yaml`
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-### Use a remote `tools.yaml`
+### Using a remote `tools.yaml`
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s https://example.com/tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
 ```
 
-- `tools.yaml` is **your own configuration**
-- mise-seq is **NOT limited to the bundled sample**
-- The bundled sample is **for reference and testing only**
+- `tools.yaml` is provided by the user
+- The bundled sample configuration is provided for reference only
 
 ---
 
-## Why mise-seq?
+## Background
 
-`mise install` may install multiple tools in parallel.
-In practice, parallel installs can fail when tools depend on each other.
+While `mise` supports parallel installation of multiple tools, implicit ordering
+constraints or runtime dependencies may cause failures.
 
-**mise-seq** solves this by:
+mise-seq avoids these issues by adopting the following approach:
 
-- Installing tools **one by one**
-- Respecting an explicit order (`tools_order`)
-- Running lifecycle hooks (`preinstall` / `postinstall`)
+- Install tools sequentially
+- Respect an explicit order (`tools_order`)
+- Execute hooks before and after installation
 
 ---
 
-## Configuration (`tools.yaml`)
+## Configuration
 
-### Tool definition
+### Basic tool definition
 
 ```yaml
 tools:
@@ -55,7 +50,7 @@ tools:
     version: latest
 ```
 
-### Explicit install order (optional)
+### Installation order (optional)
 
 ```yaml
 tools_order:
@@ -67,12 +62,12 @@ tools_order:
 
 ## Hooks
 
-Only these hooks are allowed:
+The following hook types are supported:
 
 - `preinstall`
 - `postinstall`
 
-Example:
+An example is shown below.
 
 ```yaml
 preinstall:
@@ -80,54 +75,46 @@ preinstall:
     when: [install, update]
 ```
 
-### Important rules
+### Execution rules
 
-- `run` is executed **as-is with POSIX `sh`**
-- Use standard shell variables (`$HOME`, `${VAR}`)
-- **Do NOT** use mise template syntax (`{{env.HOME}}`)
-- Hook scripts are **not validated** by CUE
+- Hooks are executed using POSIX `sh`
+- Standard environment variables such as `$HOME` and `${VAR}` are available
+- mise template syntax (`{{env.HOME}}`) is not supported
+- Hook script contents are not validated by CUE
 
 ---
 
 ## Validation
 
-Before installing anything, mise-seq runs:
+Before execution, mise-seq performs the following validations:
 
-1. YAML parse check
+1. YAML syntax validation
+2. Schema validation using CUE
 
-   ```sh
-   yq -e '.' tools.yaml
-   ```
-
-2. Schema validation
-
-   ```sh
-   cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
-   ```
+```sh
+yq -e '.' tools.yaml
+cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+```
 
 ---
 
-## Sample `tools.yaml`
+## Sample configuration
 
-The repository includes `.tools/tools.yaml` as a **sample**.
+The repository includes `.tools/tools.yaml` as a sample configuration.
 
-- It is **not required**
-- It is **not special**
-- It exists only as a reference and for release testing
+- It is not required
+- It has no special behavior
+- It is used for reference and pre-release validation
 
-Your own `tools.yaml` is always supported and is the primary use case.
+The primary input is always the user-provided `tools.yaml`.
 
 ---
 
 ## Installation (verified, optional)
 
-If you want reproducibility and verification:
-
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS \
-  -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  -o install.sh
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
 
 sha256sum -c SHA256SUMS --ignore-missing
 
@@ -139,19 +126,17 @@ sh install.sh ./tools.yaml
 ## Installation (convenience)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-⚠️ This does not verify `install.sh` itself.
-Use the verified method above if security or reproducibility matters.
+In this mode, the integrity of `install.sh` itself is not verified.
 
 ---
 
 ## Prerequisites
 
-- `mise` must already be installed system-wide
-- Each user manages tools in their own home directory
+- `mise` must be installed system-wide
+- Tools are managed on a per-user basis
 
 ---
 

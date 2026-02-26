@@ -1,62 +1,48 @@
 # mise-seq
 
-[**English**](./README.md) | 日本語 | [**中文**](./README.zh.md)
+mise-seq は system-installed な `mise` の上で動作する
+順序付きインストーラである。
 
-**mise-seq** は、system-installed な `mise` の上で動作する
-**順序付きインストーラ**です。
-
-目的はひとつだけです。
-
-> **curl | sh で、自分の tools.yaml をそのまま使うこと**
+ユーザーが定義した設定ファイル（`tools.yaml`）を用いて、
+開発ツールを 1 つずつ確実にインストールするための仕組みを提供する。
 
 ---
 
-## クイックインストール（自分の tools.yaml を使う）
+## クイックスタート
 
-### ローカルの tools.yaml を使う
+### ローカルの `tools.yaml` を使用する場合
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-### URL 上の tools.yaml を使う
+### URL 上の `tools.yaml` を使用する場合
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s https://example.com/tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
 ```
 
-- `tools.yaml` は **あなた自身の設定ファイル**です
-- mise-seq は **サンプル専用ではありません**
-- サンプルは **参考・テスト用**です
+- `tools.yaml` はユーザーが用意する
+- 同梱されているサンプル設定は参考用であり、必須ではない
 
 ---
 
-## なぜ mise-seq か？
+## 背景
 
-`mise install` は複数ツールを並列にインストールします。
+`mise` は複数のツールを並列にインストール可能であるが、
+暗黙的な依存関係や初期化順序の問題により失敗する場合がある。
 
-実際には：
+mise-seq は以下の方針により、この問題を回避する。
 
-- 依存関係が間に合わない
-- バックエンドが未初期化
-
-といった問題が起きがちです。
-
-**mise-seq** は：
-
-- ツールを **1つずつ**
-- 明示した順序で
-- フック付きで
-
-確実にインストールします。
+- ツールを順番にインストールする
+- 明示的な順序（`tools_order`）を尊重する
+- インストール前後にフックを実行する
 
 ---
 
-## 設定（tools.yaml）
+## 設定
 
-### ツール定義
+### 基本的なツール定義
 
 ```yaml
 tools:
@@ -64,7 +50,7 @@ tools:
     version: latest
 ```
 
-### インストール順（任意）
+### インストール順序（任意）
 
 ```yaml
 tools_order:
@@ -76,10 +62,12 @@ tools_order:
 
 ## フック
 
-使用できるフックは **2つだけ**です。
+使用可能なフックは以下の 2 種類である。
 
 - `preinstall`
 - `postinstall`
+
+例を以下に示す。
 
 ```yaml
 preinstall:
@@ -87,45 +75,46 @@ preinstall:
     when: [install, update]
 ```
 
-### 重要なルール
+### 実行ルール
 
-- `run` は **そのまま sh で実行**
-- `$HOME`, `${VAR}` を使用
-- `{{env.HOME}}` は使わない
-- スクリプト内容は **CUEでは検証しません**
+- フックは POSIX `sh` として実行される
+- `$HOME` や `${VAR}` などの環境変数を使用可能である
+- mise テンプレート構文（`{{env.HOME}}`）は使用不可である
+- フックスクリプトの内容は CUE による検証対象外である
 
 ---
 
 ## 検証
 
-mise-seq は実行前に必ず：
+mise-seq は実行前に以下の検証を行う。
 
-1. YAML構文チェック
-2. CUEスキーマ検証
+1. YAML の構文チェック
+2. CUE によるスキーマ検証
 
-を行います。
+```sh
+yq -e '.' tools.yaml
+cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+```
 
 ---
 
-## サンプル tools.yaml について
+## サンプル設定について
 
-`.tools/tools.yaml` は **参考用**です。
+リポジトリには `.tools/tools.yaml` がサンプルとして含まれている。
 
-- 必須ではありません
-- 特別扱いされません
-- リリース前テスト用です
+- 必須ではない
+- 特別な扱いは行われない
+- リリース前テストおよび参考用途である
 
-**主役は常にあなたの tools.yaml です。**
+実際に使用されるのは、常にユーザー自身の `tools.yaml` である。
 
 ---
 
 ## インストール（検証付き・任意）
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS \
-  -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  -o install.sh
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
 
 sha256sum -c SHA256SUMS --ignore-missing
 
@@ -137,18 +126,17 @@ sh install.sh ./tools.yaml
 ## インストール（簡易）
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-⚠️ この方法では `install.sh` 自体は検証されません。
+本方式では `install.sh` 自体の検証は行われない。
 
 ---
 
 ## 前提条件
 
-- `mise` が事前にインストールされていること
-- ユーザーごとのホームディレクトリで管理されます
+- `mise` が system-wide にインストールされていること
+- ツールはユーザー単位で管理される
 
 ---
 

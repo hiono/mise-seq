@@ -1,54 +1,49 @@
 # mise-seq
 
-[**English**](./README.md) | [**日本語**](./README.ja.md) | 中文
+mise-seq 是运行在 system-installed `mise` 之上的
+顺序安装工具。
 
-**mise-seq** 是构建在 system-installed `mise` 之上的
-**顺序安装工具**。
-
-它的核心目标只有一个：
-
-> **通过 curl | sh，直接使用你自己的 tools.yaml**
+该工具使用用户定义的配置文件（`tools.yaml`），
+以顺序方式逐个安装开发工具。
 
 ---
 
-## 快速安装（使用你自己的 tools.yaml）
+## 快速开始
 
-### 使用本地 tools.yaml
+### 使用本地 `tools.yaml`
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-### 使用远程 tools.yaml
+### 使用远程 `tools.yaml`
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s https://example.com/tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
 ```
 
-- `tools.yaml` 是你**自己的配置**
-- mise-seq **不限于示例文件**
-- 示例仅用于参考和测试
+- `tools.yaml` 由用户提供
+- 仓库中包含的示例配置仅用于参考
 
 ---
 
-## 为什么使用 mise-seq？
+## 背景
 
-`mise install` 可能并行安装多个工具，
-在实践中容易失败。
+尽管 `mise` 支持并行安装多个工具，
+但在存在隐式依赖或初始化顺序要求时，
+并行安装可能导致失败。
 
-mise-seq 会：
+mise-seq 通过以下方式避免这些问题：
 
-- 按顺序逐个安装
-- 遵循 `tools_order`
-- 支持生命周期钩子
+- 按顺序安装工具
+- 遵循显式顺序（`tools_order`）
+- 在安装前后执行钩子
 
 ---
 
-## 配置（tools.yaml）
+## 配置
 
-### 工具定义
+### 基本工具定义
 
 ```yaml
 tools:
@@ -56,7 +51,7 @@ tools:
     version: latest
 ```
 
-### 明确安装顺序（可选）
+### 安装顺序（可选）
 
 ```yaml
 tools_order:
@@ -68,56 +63,59 @@ tools_order:
 
 ## 钩子
 
-仅允许以下钩子：
+支持以下钩子类型：
 
 - `preinstall`
 - `postinstall`
 
-示例：
+示例如下。
 
 ```yaml
 preinstall:
-  - run: echo "before install"
+  - run: echo "安装前"
     when: [install, update]
 ```
 
-### 重要规则
+### 执行规则
 
-- `run` 以 **POSIX `sh`** 原样执行
-- 使用标准 shell 变量：`$HOME`、`${VAR}`
-- **禁止**使用 mise 模板语法（`{{env.HOME}}`）
-- 钩子脚本 **不在 CUE 验证范围内**
+- 钩子使用 POSIX `sh` 执行
+- 支持 `$HOME`、`${VAR}` 等标准环境变量
+- 不支持 mise 模板语法（`{{env.HOME}}`）
+- 钩子脚本内容不由 CUE 验证
 
 ---
 
 ## 验证
 
-执行安装前，mise-seq 会运行：
+mise-seq 在执行前执行以下验证：
 
-1. YAML 解析检查
-2. 架构验证
+1. YAML 语法验证
+2. 使用 CUE 进行模式验证
+
+```sh
+yq -e '.' tools.yaml
+cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+```
 
 ---
 
-## 示例 tools.yaml
+## 示例配置
 
-仓库中的 `.tools/tools.yaml` 仅作为 **示例**。
+仓库中包含 `.tools/tools.yaml` 作为示例配置。
 
-- **非必需**
-- **非特殊**
-- 仅用于参考和发布测试
+- 非必需
+- 无特殊行为
+- 仅用于参考和发布前验证
 
-你的 `tools.yaml` 始终被支持，是主要用例。
+主要输入始终是用户提供的 `tools.yaml`。
 
 ---
 
 ## 安装（已验证，可选）
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS \
-  -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  -o install.sh
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
 
 sha256sum -c SHA256SUMS --ignore-missing
 
@@ -126,21 +124,20 @@ sh install.sh ./tools.yaml
 
 ---
 
-## 安装（简便）
+## 安装（简易）
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh \
-  | sh -s ./tools.yaml
+curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
 ```
 
-⚠️ 此方式不会验证 `install.sh` 本身。
+此方式不会验证 `install.sh` 本身的完整性。
 
 ---
 
-## 前提条件
+## 前置条件
 
-- `mise` 必须已系统级安装
-- 每个用户在主目录下管理工具
+- 系统中必须已安装 `mise`
+- 工具按用户范围进行管理
 
 ---
 
