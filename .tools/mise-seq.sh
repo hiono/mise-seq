@@ -294,6 +294,9 @@ mapfile -t TOOL_NAMES < <(read_tool_order)
 log_debug "After read_tool_order: ${#TOOL_NAMES[@]} tools"
 log_debug "Tools to process: ${TOOL_NAMES[*]}"
 
+echo "DEBUG: TOOL_NAMES count = ${#TOOL_NAMES[@]}"
+echo "DEBUG: TOOL_NAMES = ${TOOL_NAMES[*]}"
+
 if [ ${#TOOL_NAMES[@]} -eq 0 ]; then
     log_error "No tools to process!"
     exit 1
