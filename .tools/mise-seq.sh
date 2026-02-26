@@ -63,6 +63,7 @@ if ! command -v cue >/dev/null 2>&1; then
 fi
 
 require_cmd cue
+log_debug "CUE command found: $(command -v cue)"
 CUE="$(command -v cue)"
 
 log_debug "Using config: $CFG"
@@ -71,6 +72,7 @@ log_debug "State directory: $STATE_DIR"
 
 [[ -f "$CFG" ]] || die "Config not found: $CFG"
 
+log_debug "About to call cfg_json..."
 # Convert YAML to JSON using cue (more reliable than yq)
 cfg_json() {
 	$CUE export "$CFG" --out json 2>/dev/null || echo "{}"
