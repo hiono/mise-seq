@@ -55,13 +55,14 @@ if [ -n "$arg_tools" ]; then
 	else
 		if [ -f "$arg_tools" ]; then
 			cp "$arg_tools" "$T/tools.yaml"
-		elif [ -f "./tools.yaml" ]; then
-			cp "./tools.yaml" "$T/tools.yaml"
 		else
 			echo "ERROR: tools.yaml not found: $arg_tools" >&2
 			exit 1
 		fi
 	fi
+else
+	# Use bundled tools.yaml from repo
+	:
 fi
 
 cp "$T/mise-seq.sh" "$TOOLS_DIR/mise-seq.sh"
