@@ -1,183 +1,188 @@
-# mise-seq
+# config-loader
 
-mise-seq は system-installed な `mise` の上で動作する順序付きインストーラである。
+CUE、JSON、YAML、TOML 設定ファイルを読み込み、[mise](https://github.com/jdx/mise) CLI をラップしてツール管理を行う Go ライブラリ。
 
-ユーザーが定義した設定ファイル（`tools.yaml`）を用いて、
-開発ツールを 1 つずつ確実にインストールするための仕組みを提供する。
+---
+
+## 機能
+
+- **マルチフォーマット対応**: JSON、YAML、TOML、CUE
+- **統合 Loader API**: フォーマットを自動検出、パース
+- **mise CLI ラッパー**: Go でツールのインストール、アップグレード、一覧表示
+- **フック対応**: インストール前後にフックを実行
+- **順序付きインストール**: `tools_order` を尊重した順でインストール
+
+---
+
+## インストール
+
+```bash
+go get github.com/mise-seq/config-loader
+```
 
 ---
 
 ## クイックスタート
 
-### ローカルの `tools.yaml` を使用する場合
+```go
+package main
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+import (
+    "context"
+    "log"
+
+    "github.com/mise-seq/config-loader/config"
+    "github.com/mise-seq/config-loader/mise"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 設定ファイルを読み込み
+    loader := config.NewLoader()
+    cfg, err := loader.Parse("tools.yaml")
+    if err != nil {
+        log.Fatalf("設定読み込み失敗: %v", err)
+    }
+
+    // フック付きでツールをインストール
+    client := mise.NewClient()
+    if err := client.InstallAllWithHooks(ctx, cfg); err != nil {
+        log.Fatalf("インストール失敗: %v", err)
+    }
+}
 ```
-
-### URL 上の `tools.yaml` を使用する場合
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
-```
-
-- `tools.yaml` はユーザーが用意する
-- 同名されているサンプル設定は参考用であり、必須ではない
 
 ---
 
-## 背景
+## 設定フォーマット
 
-`mise` は複数のツールを並列にインストール可能であるが、
-暗黙的な依存関係や初期化順序の問題により失敗する場合がある。
-
-mise-seq は以下の方針により、この問題を回避する。
-
-- ツールを順番にインストールする
-- 明示的な順序（`tools_order`）を尊重する
-- インストール前後にフックを実行する
-
----
-
-## 設定
-
-### 基本的なツール定義
+### YAML
 
 ```yaml
 tools:
   jq:
     version: latest
-```
+  lazygit:
+    version: latest
 
-### インストール順序（任意）
-
-```yaml
 tools_order:
   - jq
   - lazygit
+```
+
+### JSON
+
+```json
+{
+  "tools": {
+    "jq": { "version": "latest" },
+    "lazygit": { "version": "latest" }
+  },
+  "tools_order": ["jq", "lazygit"]
+}
+```
+
+### TOML
+
+```toml
+[tools.jq]
+version = "latest"
+
+[tools.lazygit]
+version = "latest"
+
+tools_order = ["jq", "lazygit"]
 ```
 
 ---
 
 ## フック
 
-使用可能なフックは以下の 2 種類である。
+以下のフック类型をサポート：
 
-- `preinstall`
-- `postinstall`
+- `preinstall`: インストール前に実行
+- `postinstall`: インストール後に実行
 
-例および実用的な使用例を以下に示す。
-
-### バージョン確認
-
-```yaml
-tools:
-  jq:
-    version: latest
-    postinstall:
-      - when: [install, update]
-        run: |
-          set -eu
-          jq --version
-```
-
-### 設定ディレクトリの初期化
+### フック例
 
 ```yaml
 tools:
   lazygit:
     version: latest
+    preinstall:
+      - run: |
+          echo "lazygit をインストール中..."
     postinstall:
-      - when: [install]
-        run: |
-          set -eu
+      - run: |
           mkdir -p "$HOME/.config/lazygit"
 ```
 
-### 設定ファイルの雛形生成（既存ファイルは上書きしない）
-
-```yaml
-tools:
-  rg:
-    version: latest
-    postinstall:
-      - when: [install]
-        run: |
-          set -eu
-          cfg="$HOME/.config/ripgrep/config"
-          if [ ! -f "$cfg" ]; then
-            mkdir -p "$(dirname "$cfg")"
-            cat >"$cfg" <<'EOF'
---smart-case
---hidden
-EOF
-          fi
-```
-
-### 実行ルール
-
-- フックは POSIX `sh` として実行される
-- `$HOME` や `${VAR}` などの環境変数を使用可能である
-- mise テンプレート構文（`{{env.HOME}}`）は使用不可である
-- フックスクリプトの内容は CUE による検証対象外である
-
 ---
 
-## 検証
+## API リファレンス
 
-mise-seq は実行前に以下の検証を行う。
+### config パッケージ
 
-1. YAML の構文チェック
-2. CUE によるスキーマ検証
+```go
+// 新規ローダーを作成
+loader := config.NewLoader()
 
-```sh
-yq -e '.' tools.yaml
-cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+// 設定ファイルをパース（自動検出）
+cfg, err := loader.Parse("tools.yaml")
+
+// ツール一覧を取得
+tools := config.GetTools(cfg)
+
+// インストール順序を取得
+order := config.GetToolOrder(cfg)
 ```
 
----
+### mise パッケージ
 
-## サンプル設定
+```go
+client := mise.NewClient()
 
-リポジトリには `.tools/tools.yaml` および `.tools/tools.toml` がサンプルとして含まれている。
+// 単一ツールをインストール
+result, err := client.InstallWithOutput(ctx, "jq@latest")
 
-- 必須ではない
-- 特別な扱いは行われない
-- フックの構造を示すためにコメントを含んでいる
-- リリース前テストおよび参考用途である
+// ツールがインストール済みか確認
+installed, err := client.IsInstalled(ctx, "jq")
 
-実際に使用されるのは、常にユーザー自身の `tools.yaml` である。
+// 未インストール時のみインストール
+installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
 
----
+// ツールをアップグレード
+result, err := client.UpgradeWithOutput(ctx, "jq")
 
-## インストール（検証付き・任意）
+// インストール済みツールを一覧表示
+tools, err := client.ListTools(ctx)
 
-セキュリティ強化のため、GitHub公式のSHA256 digestでリリースアセットを検証できる：
-
-```sh
-# リリースアセットのSHA256 digestを表示
-gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
-
-# zipをダウンロードして検証（必要に応じて）
-curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
+// フック付きでインストール（tools_order を尊重）
+err := client.InstallAllWithHooks(ctx, cfg)
 ```
 
----
+### hooks パッケージ
 
-## インストール（簡易）
+```go
+runner := hooks.NewRunner(false)
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+// 单一のフックを実行
+result, err := runner.Run(ctx, "echo hello")
+
+// 複数のフックを実行
+results, err := runner.RunHooks(ctx, []string{
+    "echo first",
+    "echo second",
+})
 ```
-
-本方式では `install.sh` 自体の検証は行われない。
 
 ---
 
 ## 前提条件
 
-- `mise` が system-wide にインストールされていること
-- ツールはユーザー単位で管理される
+- Go 1.21+
+- [mise](https://github.com/jdx/mise) CLI がシステムにインストール済み
 
 ---
 

@@ -1,61 +1,98 @@
-# mise-seq
+# config-loader
 
-mise-seq is a sequential installer that operates on top of a system-installed
-`mise`.
-
-It provides a mechanism to install developer tools one by one using a user-defined
-configuration file (`tools.yaml`).
+A Go library for loading configuration files (CUE, JSON, YAML, TOML) and wrapping [mise](https://github.com/jdx/mise) CLI for tool management.
 
 ---
 
-## Quick start
+## Features
 
-### Using a local `tools.yaml`
+- **Multi-format config loading**: JSON, YAML, TOML, CUE
+- **Unified Loader API**: Auto-detect format and parse with single call
+- **mise CLI wrapper**: Install, upgrade, list tools with Go
+- **Hook support**: Run preinstall/postinstall hooks during tool installation
+- **Ordered installation**: Respect `tools_order` for sequential installs
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+---
+
+## Installation
+
+```bash
+go get github.com/mise-seq/config-loader
 ```
 
-### Using a remote `tools.yaml`
+---
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
+## Quick Start
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/mise-seq/config-loader/config"
+    "github.com/mise-seq/config-loader/mise"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Load configuration
+    loader := config.NewLoader()
+    cfg, err := loader.Parse("tools.yaml")
+    if err != nil {
+        log.Fatalf("Failed to load config: %v", err)
+    }
+
+    // Install tools with hooks
+    client := mise.NewClient()
+    if err := client.InstallAllWithHooks(ctx, cfg); err != nil {
+        log.Fatalf("Installation failed: %v", err)
+    }
+}
 ```
 
-- `tools.yaml` is provided by the user
-- The bundled sample configuration is provided for reference only
-
 ---
 
-## Background
+## Configuration Format
 
-While `mise` supports parallel installation of multiple tools, implicit ordering
-constraints or runtime dependencies may cause failures.
-
-mise-seq avoids these issues by adopting the following approach:
-
-- Install tools sequentially
-- Respect an explicit order (`tools_order`)
-- Execute hooks before and after installation
-
----
-
-## Configuration
-
-### Basic tool definition
+### YAML
 
 ```yaml
 tools:
   jq:
     version: latest
-```
+  lazygit:
+    version: latest
 
-### Installation order (optional)
-
-```yaml
 tools_order:
   - jq
   - lazygit
+```
+
+### JSON
+
+```json
+{
+  "tools": {
+    "jq": { "version": "latest" },
+    "lazygit": { "version": "latest" }
+  },
+  "tools_order": ["jq", "lazygit"]
+}
+```
+
+### TOML
+
+```toml
+[tools.jq]
+version = "latest"
+
+[tools.lazygit]
+version = "latest"
+
+tools_order = ["jq", "lazygit"]
 ```
 
 ---
@@ -64,136 +101,88 @@ tools_order:
 
 The following hook types are supported:
 
-- `preinstall`
-- `postinstall`
+- `preinstall`: Run before tool installation
+- `postinstall`: Run after tool installation
 
-An example is shown below.
-
-```yaml
-tools:
-  jq:
-    version: latest
-    postinstall:
-      - when: [install, update]
-        run: |
-          set -eu
-          jq --version
-```
-
-### Practical postinstall examples
-
-These examples are safe to use as reference for your own configuration.
-
-**1. Version verification**
-
-```yaml
-tools:
-  jq:
-    version: latest
-    postinstall:
-      - when: [install, update]
-        run: |
-          set -eu
-          jq --version
-```
-
-**2. Initialize config directory**
+### Hook Example
 
 ```yaml
 tools:
   lazygit:
     version: latest
+    preinstall:
+      - run: |
+          echo "Installing lazygit..."
     postinstall:
-      - when: [install]
-        run: |
-          set -eu
+      - run: |
           mkdir -p "$HOME/.config/lazygit"
 ```
 
-**3. Generate config template (if not exists)**
-
-```yaml
-tools:
-  rg:
-    version: latest
-    postinstall:
-      - when: [install]
-        run: |
-          set -eu
-          cfg="$HOME/.config/ripgrep/config"
-          if [ ! -f "$cfg" ]; then
-            mkdir -p "$(dirname "$cfg")"
-            cat >"$cfg" <<'EOF'
---smart-case
---hidden
-EOF
-          fi
-```
-
-### Execution rules
-
-- Hooks are executed using POSIX `sh`
-- Standard environment variables such as `$HOME` and `${VAR}` are available
-- mise template syntax (`{{env.HOME}}`) is not supported
-- Hook script contents are not validated by CUE
-
 ---
 
-## Validation
+## API Reference
 
-Before execution, mise-seq performs the following validations:
+### config package
 
-1. YAML syntax validation
-2. Schema validation using CUE
+```go
+// Create a new loader
+loader := config.NewLoader()
 
-```sh
-yq -e '.' tools.yaml
-cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+// Parse a config file (auto-detects format)
+cfg, err := loader.Parse("tools.yaml")
+
+// Get tools from config
+tools := config.GetTools(cfg)
+
+// Get installation order
+order := config.GetToolOrder(cfg)
 ```
 
----
+### mise package
 
-## Sample configuration
+```go
+client := mise.NewClient()
 
-The repository includes `.tools/tools.yaml` and `.tools/tools.toml` as sample configuration.
+// Install a single tool
+result, err := client.InstallWithOutput(ctx, "jq@latest")
 
-- It is not required
-- It has no special behavior
-- It contains comments to show hook structure
-- It is used for reference and pre-release validation
+// Check if tool is installed
+installed, err := client.IsInstalled(ctx, "jq")
 
-The primary input is always the user-provided `tools.yaml`.
+// Install if not already installed
+installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
 
----
+// Upgrade a tool
+result, err := client.UpgradeWithOutput(ctx, "jq")
 
-## Installation (verified, optional)
+// List installed tools
+tools, err := client.ListTools(ctx)
 
-For additional security, you can verify the release asset using GitHub's built-in SHA256 digest:
-
-```sh
-# View SHA256 digest for release assets
-gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
-
-# Download and verify zip (if needed)
-curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
+// Install with hooks (respects tools_order)
+err := client.InstallAllWithHooks(ctx, cfg)
 ```
 
----
+### hooks package
 
-## Installation (convenience)
+```go
+runner := hooks.NewRunner(false)
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+// Run a single hook
+result, err := runner.Run(ctx, "echo hello")
+
+// Run multiple hooks
+results, err := runner.RunHooks(ctx, []string{
+    "echo first",
+    "echo second",
+})
 ```
-
-In this mode, the integrity of `install.sh` itself is not verified.
 
 ---
 
 ## Prerequisites
 
-- `mise` must be installed system-wide
-- Tools are managed on a per-user basis
+- Go 1.21+
+- [mise](https://github.com/jdx/mise) CLI installed system-wide
 
 ---
 
