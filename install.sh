@@ -53,11 +53,14 @@ if [ -n "$arg_tools" ]; then
 	if is_url "$arg_tools"; then
 		download "$arg_tools" "$T/tools.yaml"
 	else
-		[ -f "$arg_tools" ] || {
+		if [ -f "$arg_tools" ]; then
+			cp "$arg_tools" "$T/tools.yaml"
+		elif [ -f "./tools.yaml" ]; then
+			cp "./tools.yaml" "$T/tools.yaml"
+		else
 			echo "ERROR: tools.yaml not found: $arg_tools" >&2
 			exit 1
-		}
-		cp "$arg_tools" "$T/tools.yaml"
+		fi
 	fi
 fi
 
