@@ -1,12 +1,37 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0"
+arg_tools="${1:-}"
+arg_ref="${2:-}"
+
+get_latest_tag() {
+    latest=$(curl -fsSL --max-time 10 -H "User-Agent: mise-seq-installer" \
+        "https://api.github.com/repos/hiono/mise-seq/releases/latest" 2>/dev/null | \
+        grep '"tag_name"' | sed 's/.*"\([^"]*\)".*/\1/')
+    if [ -z "$latest" ]; then
+        echo "WARNING: Could not fetch latest tag, using v0.1.0" >&2
+        echo "v0.1.0"
+    else
+        echo "$latest"
+    fi
+}
+
+REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/$(get_latest_tag)"
+
+case "$arg_ref" in
+    main) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/main" ;;
+    v[0-9]*) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$arg_ref" ;;
+    https://raw.githubusercontent.com/*)
+        REPO_RAW_BASE="$(echo "$arg_ref" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|')" ;;
+    *)    REPO_RAW_BASE="${REPO_RAW_BASE:-$REPO_RAW_BASE_DEFAULT}" ;;
+esac
+
+case "$REPO_RAW_BASE" in
+    https://raw.githubusercontent.com/hiono/mise-seq/*) ;;
+    *) echo "ERROR: Invalid repository URL: $REPO_RAW_BASE" >&2; exit 1 ;;
+esac
 
 TOOLS_DIR="${TOOLS_DIR:-$HOME/.tools}"
-REPO_RAW_BASE="${REPO_RAW_BASE:-$REPO_RAW_BASE_DEFAULT}"
-
-arg_tools="${1:-}"
 
 is_url() {
 	case "$1" in

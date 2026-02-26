@@ -1,7 +1,6 @@
 # mise-seq
 
-mise-seq は system-installed な `mise` の上で動作する
-順序付きインストーラである。
+mise-seq は system-installed な `mise` の上で動作する順序付きインストーラである。
 
 ユーザーが定義した設定ファイル（`tools.yaml`）を用いて、
 開発ツールを 1 つずつ確実にインストールするための仕組みを提供する。
@@ -23,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | 
 ```
 
 - `tools.yaml` はユーザーが用意する
-- 同éliensされているサンプル設定は参考用であり、必須ではない
+- 同名されているサンプル設定は参考用であり、必須ではない
 
 ---
 

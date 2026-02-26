@@ -148,17 +148,18 @@ Before execution, mise-seq performs the following validations:
 
 ```sh
 yq -e '.' tools.yaml
-cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
 ```
 
 ---
 
 ## Sample configuration
 
-The repository includes `.tools/tools.yaml` as a sample configuration.
+The repository includes `.tools/tools.yaml` and `.tools/tools.toml` as sample configuration.
 
 - It is not required
 - It has no special behavior
+- It contains comments to show hook structure
 - It is used for reference and pre-release validation
 
 The primary input is always the user-provided `tools.yaml`.
