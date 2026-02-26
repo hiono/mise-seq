@@ -67,10 +67,11 @@ if ! command -v cue >/dev/null 2>&1; then
 fi
 
 require_cmd cue
+echo "=== After require_cmd cue ===" >&2
 log_debug "CUE command found: $(command -v cue)"
 CUE="$(command -v cue)"
 
-echo "=== After require_cmd cue ===" >&2
+echo "=== After setting CUE ===" >&2
 log_debug "Using config: $CFG"
 log_debug "Using schema: $SCHEMA_CUE"
 log_debug "State directory: $STATE_DIR"
