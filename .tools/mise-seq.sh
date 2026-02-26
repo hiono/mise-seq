@@ -146,9 +146,11 @@ cfg_json() {
 
 # Now apply settings and import tools AFTER config is loaded
 echo "=== Applying mise settings ===" >&2
+log_debug "cfg_json before apply_mise_settings: $(cfg_json | head -c 200)"
 apply_mise_settings
 
 echo "=== Importing tools to mise ===" >&2
+log_debug "cfg_json before import_tools_to_mise: $(cfg_json | head -c 200)"
 import_tools_to_mise
 
 # Get tools_order array
