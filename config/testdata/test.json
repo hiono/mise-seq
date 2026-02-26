@@ -1,0 +1,22 @@
+{
+  "tools_order": ["go", "node", "python"],
+  "tools": {
+    "go": {
+      "version": "1.21",
+      "exe": "go"
+    },
+    "node": {
+      "version": "20",
+      "exe": "node"
+    }
+  },
+  "defaults": {
+    "preinstall": [
+      {
+        "when": ["install"],
+        "description": "Test preinstall hook",
+        "run": "echo 'preinstall'"
+      }
+    ]
+  }
+}
