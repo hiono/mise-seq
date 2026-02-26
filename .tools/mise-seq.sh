@@ -63,38 +63,42 @@ fi
 apply_mise_settings() {
 	log_info "Applying mise settings from config..."
 	
-	# Use cue to extract settings from 'settings' or 'defaults' (handles both)
-	local settings_json
-	settings_json="$($CUE export "$CFG" --out json 2>/dev/null | jq -r '.settings // .default.settings // {}')"
+	# Use cue to extract settings and apply them directly
+	local npm_pkg
+	npm_pkg="$($CUE export "$CFG" --out json 2>/dev/null | grep -o '"npm":{[^}]*}' | grep -o '"package_manager":"[^"]*"' | cut -d'"' -f4 || echo "")"
 	
-	if [ "$settings_json" = "{}" ] || [ -z "$settings_json" ]; then
-		log_debug "No settings found in config"
-		return
+	if [ -n "$npm_pkg" ]; then
+		log_info "Setting npm.package_manager = $npm_pkg"
+		mise settings set "npm.package_manager" "$npm_pkg" 2>/dev/null || true
 	fi
 
-	log_info "Applying mise settings..."
-	echo "$settings_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"' 2>/dev/null | while IFS='=' read -r key value; do
-		if [ -n "$key" ]; then
-			log_debug "Setting: $key = $value"
-			mise settings set "$key" "$value" 2>/dev/null || true
-		fi
-	done
+	local experimental
+	experimental="$($CUE export "$CFG" --out json 2>/dev/null | grep -o '"experimental":[^,}]*' | cut -d':' -f2 | tr -d ' ' || echo "")"
+	
+	if [ -n "$experimental" ] && [ "$experimental" != "null" ]; then
+		log_info "Setting experimental = $experimental"
+		mise settings set "experimental" "$experimental" 2>/dev/null || true
+	fi
 }
 
 import_tools_to_mise() {
 	log_info "Importing tools from config to mise..."
 	
-	# Use cue to extract tools from 'tools' or 'default.tools' (handles both)
-	local tools_json
-	tools_json="$($CUE export "$CFG" --out json 2>/dev/null | jq -r '.tools // .default.tools // {}')"
+	# Use cue to get tool names and versions
+	local tools_list
+	tools_list="$($CUE export "$CFG" --out json 2>/dev/null)"
 	
-	if [ "$tools_json" = "{}" ] || [ -z "$tools_json" ]; then
-		log_debug "No tools found in config"
+	if [ -z "$tools_list" ]; then
+		log_debug "No config exported"
 		return
 	fi
 
 	log_info "Tools found, adding to mise..."
-	echo "$tools_json" | jq -r 'to_entries[] | "\(.key) \(.value.version)"' 2>/dev/null | while read -r tool version; do
+	
+	# Extract tools from both 'tools' and 'default.tools' using grep/sed
+	echo "$tools_list" | grep -oE '"[a-zA-Z0-9:_/-]+":\s*{"version":"[^"]*"' | while read -r line; do
+		tool="$(echo "$line" | sed 's/:.*//' | tr -d '"')"
+		version="$(echo "$line" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)"
 		if [ -n "$tool" ] && [ -n "$version" ]; then
 			log_info "Adding tool: $tool@$version"
 			mise add "$tool@$version" 2>/dev/null || true
