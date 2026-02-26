@@ -60,10 +60,36 @@ fi
 # Bootstrap validators using mise (aqua)
 # Note: yq is no longer required for config parsing (using cue + jq instead)
 
+apply_mise_settings() {
+	if ! command -v jq >/dev/null 2>&1; then
+		log_debug "jq not available, skipping settings"
+		return
+	fi
+
+	local settings_json
+	settings_json="$(echo "$cfg_json" | jq -r '.settings // {}')"
+	
+	if [ "$settings_json" = "{}" ] || [ -z "$settings_json" ]; then
+		log_debug "No settings found in config"
+		return
+	fi
+
+	log_info "Applying mise settings from config..."
+	echo "$settings_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
+		if [ -n "$key" ]; then
+			log_debug "Setting: $key = $value"
+			mise settings set "$key" "$value" 2>/dev/null || true
+		fi
+	done
+}
+
 echo "=== Starting mise-seq ===" >&2
 echo "=== Checking for cue ===" >&2
 
 if ! command -v cue >/dev/null 2>&1; then
+	echo "=== Applying mise settings ===" >&2
+	apply_mise_settings
+
 	echo "=== Running mise install ===" >&2
 	log_info "Running mise install to install tools from config..."
 	run mise install >/dev/null 2>&1 || true
