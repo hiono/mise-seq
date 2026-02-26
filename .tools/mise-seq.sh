@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+echo "MISE-SEQ SCRIPT STARTED" >&2
+echo "DEBUG=$DEBUG" >&2
 
 TOOLS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CFG="${TOOLS_DIR}/tools.yaml"
