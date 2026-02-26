@@ -296,8 +296,10 @@ log_debug "Tools to process: ${TOOL_NAMES[*]}"
 for tool in "${TOOL_NAMES[@]}"; do
 	[[ -z "${tool//[[:space:]]/}" ]] && continue
 
+	log_debug "Checking tool: $tool"
 	exists="$(tool_exists "$tool")"
-	[[ "$exists" != "true" ]] && continue
+	log_debug "tool_exists('$tool') = $exists"
+	[[ "$exists" != "true" ]] && { log_debug "Skipping $tool (already installed)"; continue; }
 
 	ver="$(get_tool_version "$tool")"
 	spec="${tool}@${ver}"
