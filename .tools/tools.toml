@@ -1,19 +1,27 @@
-# tools.toml (minimal example - TOML advantages)
-# No indentation errors, native types, clean syntax
+# tools.toml (example)
 
+# tools_order defines installation sequence
 tools_order = ["uv", "bun", "rust"]
-
-[defaults]
-[[defaults.postinstall]]
-description = "Summary"
-run = '''
-echo "=== Installed tools ==="
-ls -la "$TOOLS_DIR"/*.sh 2>/dev/null || true
-'''
 
 [tools.uv]
 version = "latest"
 exe = "uv"
+
+[[tools.uv.preinstall]]
+when = ["install"]
+description = "Before uv install"
+run = '''
+set -eu
+echo "[uv.preinstall]"
+'''
+
+[[tools.uv.postinstall]]
+when = ["install"]
+description = "After uv install"
+run = '''
+set -eu
+echo "[uv.postinstall]"
+'''
 
 [tools.bun]
 version = "latest"

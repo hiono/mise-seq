@@ -1,53 +1,32 @@
 # tools.yaml (example)
 
-defaults:
-  preinstall:
-    - description: "Show execution order (begin)"
-      run: |
-        set -eu
-        echo "[defaults.preinstall] begin"
-        echo "[defaults.preinstall] date=$(date -Is)"
-
-  postinstall:
-    - description: "Show execution order (end)"
-      run: |
-        set -eu
-        echo "[defaults.postinstall] end"
-        echo "[defaults.postinstall] date=$(date -Is)"
-
+# tools_order defines installation sequence
 tools_order:
-  - jq
-  - lazygit
+  - uv
+  - bun
+  - rust
 
 tools:
-  jq:
+  uv:
     version: latest
-    exe: jq
+    exe: uv
     preinstall:
-      - when: [install, update]
-        description: "Before installing/updating jq"
+      - when: [install]
+        description: "Before uv install"
         run: |
           set -eu
-          echo "[jq.preinstall]"
+          echo "[uv.preinstall]"
     postinstall:
-      - when: [install, update]
-        description: "After installing/updating jq"
+      - when: [install]
+        description: "After uv install"
         run: |
           set -eu
-          jq --version || true
+          echo "[uv.postinstall]"
 
-  lazygit:
+  bun:
     version: latest
-    exe: lazygit
-    preinstall:
-      - when: [install, update]
-        description: "Before installing/updating lazygit"
-        run: |
-          set -eu
-          echo "[lazygit.preinstall]"
-    postinstall:
-      - when: [install, update]
-        description: "After installing/updating lazygit"
-        run: |
-          set -eu
-          lazygit --version || true
+    exe: bun
+
+  rust:
+    version: latest
+    exe: rust
