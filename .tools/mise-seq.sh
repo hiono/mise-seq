@@ -36,6 +36,7 @@ require_cmd() {
 }
 
 require_cmd mise
+log_debug "Checking mise command..."
 mkdir -p "$STATE_DIR"
 
 MISE_SHIMS_DEFAULT="${HOME}/.local/share/mise/shims"
@@ -270,8 +271,10 @@ read_tool_order() {
 }
 
 run_defaults preinstall
+log_debug "After run_defaults preinstall"
 
 mapfile -t TOOL_NAMES < <(read_tool_order)
+log_debug "After read_tool_order: ${#TOOL_NAMES[@]} tools"
 log_debug "Tools to process: ${TOOL_NAMES[*]}"
 
 for tool in "${TOOL_NAMES[@]}"; do
