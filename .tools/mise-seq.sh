@@ -76,14 +76,16 @@ log_debug "Checking config file..."
 
 log_debug "Config file exists at: $CFG"
 log_debug "Calling cfg_json..."
-# Convert YAML to JSON using cue (more reliable than yq)
-cfg_json() {
-	$CUE export "$CFG" --out json 2>/dev/null || echo "{}"
-}
+log_debug "Testing cfg_json output..."
+test_json="$(cfg_json)"
+log_debug "cfg_json returned: ${test_json:0:100}..."
 
 # Get tools_order array
 get_tools_order() {
-	cfg_json | jq -r '.tools_order // [] | .[]' 2>/dev/null
+	log_debug "get_tools_order called"
+	order="$(cfg_json | jq -r '.tools_order // [] | .[]' 2>/dev/null)"
+	log_debug "tools_order: $order"
+	echo "$order"
 }
 
 # Check if tool exists
