@@ -154,7 +154,9 @@ import_tools_to_mise
 # Get tools_order array
 get_tools_order() {
 	log_debug "get_tools_order called"
-	order="$(cfg_json | jq -r '.tools_order // [] | .[]' 2>/dev/null)"
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	order="$(echo "$cfg" | grep -oE '"tools_order":\s*\[[^\]]*\]' | sed 's/.*\[//' | tr ',' '\n' | sed 's/.*"\([^"]*\)".*/\1/' | grep -v '^$')"
 	log_debug "tools_order: $order"
 	echo "$order"
 }
@@ -162,29 +164,33 @@ get_tools_order() {
 # Check if tool exists
 tool_exists() {
 	local tool="$1"
-	cfg_json | jq -r --arg t "$tool" '.tools | has($t)' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	echo "$cfg" | grep -q "\"$tool\":" && echo "true" || echo "false"
 }
 
 # Get tool version
 get_tool_version() {
 	local tool="$1"
-	cfg_json | jq -r --arg t "$tool" '.tools[$t].version // "latest"' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	echo "$cfg" | grep -oE "\"$tool\":\s*{[^}]*\"version\":\s*\"[^\"]*\"" | grep -oE '"version":\s*"[^"]*"' | cut -d'"' -f4 | head -1
 }
 
 # Get hook list for a tool (preinstall/postinstall)
 get_hooks() {
 	local tool="$1" phase="$2"
-	cfg_json | jq -r --arg t "$tool" --arg p "$phase" '
-		.tools[$t][$p] // []
-	' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	echo "$cfg" | grep -oE "\"$tool\":\s*{[^}]*\"$phase\":\s*\[[^\]]*\]" | sed "s/.*\"$phase\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
 }
 
 # Get defaults hooks
 get_default_hooks() {
 	local phase="$1"
-	cfg_json | jq -r --arg p "$phase" '
-		.defaults[$p] // []
-	' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	echo "$cfg" | grep -oE "\"defaults\":\s*{[^}]*\"$phase\":\s*\[[^\]]*\]" | sed "s/.*\"$phase\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
 }
 
 is_managed_by_mise() {
