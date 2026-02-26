@@ -47,16 +47,16 @@ detect_repo_from_install_url() {
 }
 
 INSTALL_URL="${INSTALL_URL:-}"
-if [ -z "$REPO_RAW_BASE" ] && [ -n "$INSTALL_URL" ]; then
+if [ -z "${REPO_RAW_BASE:-}" ] && [ -n "$INSTALL_URL" ]; then
     REPO_RAW_BASE="$(detect_repo_from_install_url "$INSTALL_URL")"
     echo "DEBUG: Detected REPO_RAW_BASE from INSTALL_URL: $REPO_RAW_BASE" >&2
 fi
 
 REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/$(get_latest_tag)"
 
-if [ -z "$arg_ref" ] && [ -n "${REPO_RAW_BASE:-}" ]; then
+if [ -z "${arg_ref:-}" ] && [ -n "${REPO_RAW_BASE:-}" ]; then
     :
-elif [ -z "$arg_ref" ]; then
+elif [ -z "${arg_ref:-}" ]; then
     arg_ref="main"
 fi
 
