@@ -77,7 +77,11 @@ log_debug "Checking config file..."
 log_debug "Config file exists at: $CFG"
 log_debug "Calling cfg_json..."
 log_debug "Testing cfg_json output..."
-test_json="$(cfg_json)"
+log_debug "CUE command: $CUE"
+log_debug "CFG file: $CFG"
+cue_output="$($CUE export "$CFG" --out json 2>&1)" || true
+log_debug "cue output: ${cue_output:0:100}..."
+test_json="$(echo "$cue_output" 2>/dev/null || echo '{}')"
 log_debug "cfg_json returned: ${test_json:0:100}..."
 
 # Get tools_order array
