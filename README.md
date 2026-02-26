@@ -70,9 +70,64 @@ The following hook types are supported:
 An example is shown below.
 
 ```yaml
-preinstall:
-  - run: echo "before install"
-    when: [install, update]
+tools:
+  jq:
+    version: latest
+    postinstall:
+      - when: [install, update]
+        run: |
+          set -eu
+          jq --version
+```
+
+### Practical postinstall examples
+
+These examples are safe to use as reference for your own configuration.
+
+**1. Version verification**
+
+```yaml
+tools:
+  jq:
+    version: latest
+    postinstall:
+      - when: [install, update]
+        run: |
+          set -eu
+          jq --version
+```
+
+**2. Initialize config directory**
+
+```yaml
+tools:
+  lazygit:
+    version: latest
+    postinstall:
+      - when: [install]
+        run: |
+          set -eu
+          mkdir -p "$HOME/.config/lazygit"
+```
+
+**3. Generate config template (if not exists)**
+
+```yaml
+tools:
+  rg:
+    version: latest
+    postinstall:
+      - when: [install]
+        run: |
+          set -eu
+          cfg="$HOME/.config/ripgrep/config"
+          if [ ! -f "$cfg" ]; then
+            mkdir -p "$(dirname "$cfg")"
+            cat >"$cfg" <<'EOF'
+--smart-case
+--hidden
+EOF
+          fi
 ```
 
 ### Execution rules

@@ -6,22 +6,14 @@ tools_order = ["uv", "bun", "rust"]
 [tools.uv]
 version = "latest"
 exe = "uv"
-
-[[tools.uv.preinstall]]
-when = ["install"]
-description = "Before uv install"
-run = '''
-set -eu
-echo "[uv.preinstall]"
-'''
-
-[[tools.uv.postinstall]]
-when = ["install"]
-description = "After uv install"
-run = '''
-set -eu
-echo "[uv.postinstall]"
-'''
+# Structure example (not executed in sample)
+# [[tools.uv.preinstall]]
+# when = ["install"]
+# description = "Before uv install"
+# run = '''
+# set -eu
+# echo "[uv.preinstall]"
+# '''
 
 [tools.bun]
 version = "latest"

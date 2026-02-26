@@ -10,18 +10,19 @@ tools:
   uv:
     version: latest
     exe: uv
-    preinstall:
-      - when: [install]
-        description: "Before uv install"
-        run: |
-          set -eu
-          echo "[uv.preinstall]"
-    postinstall:
-      - when: [install]
-        description: "After uv install"
-        run: |
-          set -eu
-          echo "[uv.postinstall]"
+    # Structure example (not executed in sample)
+    # preinstall:
+    #   - when: [install]
+    #     description: "Before uv install"
+    #     run: |
+    #       set -eu
+    #       echo "[uv.preinstall]"
+    # postinstall:
+    #   - when: [install]
+    #     description: "After uv install"
+    #     run: |
+    #       set -eu
+    #       echo "[uv.postinstall]"
 
   bun:
     version: latest
