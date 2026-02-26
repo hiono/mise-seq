@@ -332,3 +332,6 @@ for tool in "${TOOL_NAMES[@]}"; do
 done
 
 run_defaults postinstall
+
+log_info "=== mise-seq installation complete ==="
+log_debug "Done!"
