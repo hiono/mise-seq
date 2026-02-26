@@ -7,7 +7,7 @@ arg_ref="${2:-}"
 get_latest_tag() {
     latest=$(curl -fsSL --max-time 10 -H "User-Agent: mise-seq-installer" \
         "https://api.github.com/repos/hiono/mise-seq/releases/latest" 2>/dev/null | \
-        grep '"tag_name"' | sed 's/.*"\([^"]*\)".*/\1/')
+        grep -o '"tag_name":"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/')
     if [ -z "$latest" ]; then
         echo "WARNING: Could not fetch latest tag, using v0.1.0" >&2
         echo "v0.1.0"
@@ -25,8 +25,32 @@ get_commit_sha() {
 
 detect_ref_from_url() {
     local url="$1"
-    echo "$url" | sed -E 's|https://raw.githubusercontent.com/hiono/mise-seq/([^/]+)/.*|\1|'
+    local ref
+    ref="$(echo "$url" | sed -E 's|https://raw.githubusercontent.com/hiono/mise-seq/([^/]+)/.*|\1|')"
+    echo "$ref"
 }
+
+detect_repo_from_install_url() {
+    local url="$1"
+    local ref
+    ref="$(detect_ref_from_url "$url")"
+    if [ -n "$ref" ] && [ "$ref" != "${ref:0:1}" ]; then
+        case "$ref" in
+            main|master) echo "https://raw.githubusercontent.com/hiono/mise-seq/$ref" ;;
+            v[0-9]*) echo "https://raw.githubusercontent.com/hiono/mise-seq/$ref" ;;
+            [0-9a-f]*) echo "https://raw.githubusercontent.com/hiono/mise-seq/$ref" ;;
+            *) echo "" ;;
+        esac
+    else
+        echo ""
+    fi
+}
+
+INSTALL_URL="${INSTALL_URL:-}"
+if [ -z "$REPO_RAW_BASE" ] && [ -n "$INSTALL_URL" ]; then
+    REPO_RAW_BASE="$(detect_repo_from_install_url "$INSTALL_URL")"
+    echo "DEBUG: Detected REPO_RAW_BASE from INSTALL_URL: $REPO_RAW_BASE" >&2
+fi
 
 REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/$(get_latest_tag)"
 

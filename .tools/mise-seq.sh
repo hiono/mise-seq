@@ -70,6 +70,7 @@ require_cmd cue
 log_debug "CUE command found: $(command -v cue)"
 CUE="$(command -v cue)"
 
+echo "=== After require_cmd cue ===" >&2
 log_debug "Using config: $CFG"
 log_debug "Using schema: $SCHEMA_CUE"
 log_debug "State directory: $STATE_DIR"
