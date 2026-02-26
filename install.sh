@@ -18,6 +18,7 @@ is_url() {
 download() {
 	url="$1"
 	out="$2"
+	mkdir -p "$(dirname "$out")"
 	curl -fsSL "$url" >"$out"
 }
 
