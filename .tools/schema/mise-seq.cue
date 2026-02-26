@@ -6,7 +6,7 @@ package miseseq
 
 #ToolKeyPattern: "^[A-Za-z0-9][A-Za-z0-9._+:/@-]*$"
 
-#Version: #NonEmptyString
+#Version: string | float
 
 #Hook: close({
   run:          #NonEmptyString
