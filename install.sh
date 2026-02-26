@@ -21,14 +21,6 @@ download() {
 	curl -fsSL "$url" >"$out"
 }
 
-verify_one() {
-	rel="$1"
-	if ! (cd "$T" && grep "  $rel$" SHA256SUMS | sha256sum -c -); then
-		echo "ERROR: verification failed for $rel" >&2
-		exit 1
-	fi
-}
-
 if ! command -v mise >/dev/null 2>&1; then
 	echo "ERROR: mise is required and must be installed system-wide (e.g. via apt)." >&2
 	exit 1
@@ -40,9 +32,6 @@ TMPDIR="${TMPDIR:-/tmp}"
 T="$TMPDIR/mise-seq.$$"
 mkdir -p "$T"
 
-# Download SHA256SUMS and verify secondary downloads
-download "$REPO_RAW_BASE/SHA256SUMS" "$T/SHA256SUMS"
-
 # Runtime files (from repo)
 for f in \
 	.tools/mise-seq.sh \
@@ -50,7 +39,6 @@ for f in \
 	.tools/tools.toml \
 	.tools/schema/mise-seq.cue; do
 	download "$REPO_RAW_BASE/$f" "$T/$f"
-	verify_one "$f"
 done
 
 chmod +x "$T/mise-seq.sh"

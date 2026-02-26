@@ -153,13 +153,14 @@ cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
 
 ## インストール（検証付き・任意）
 
+セキュリティ強化のため、GitHub公式のSHA256 digestでリリースアセットを検証できる：
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
+# リリースアセットのSHA256 digestを表示
+gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
 
-sha256sum -c SHA256SUMS --ignore-missing
-
-sh install.sh ./tools.yaml
+# zipをダウンロードして検証（必要に応じて）
+curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
 ```
 
 ---

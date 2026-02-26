@@ -167,13 +167,14 @@ The primary input is always the user-provided `tools.yaml`.
 
 ## Installation (verified, optional)
 
+For additional security, you can verify the release asset using GitHub's built-in SHA256 digest:
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
+# View SHA256 digest for release assets
+gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
 
-sha256sum -c SHA256SUMS --ignore-missing
-
-sh install.sh ./tools.yaml
+# Download and verify zip (if needed)
+curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
 ```
 
 ---

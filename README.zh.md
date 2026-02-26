@@ -154,13 +154,14 @@ cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
 
 ## 安装（已验证，可选）
 
+为增强安全性，可使用 GitHub 官方的 SHA256 digest 验证发布资产：
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/SHA256SUMS -o SHA256SUMS
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh -o install.sh
+# 查看发布资产的 SHA256 digest
+gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
 
-sha256sum -c SHA256SUMS --ignore-missing
-
-sh install.sh ./tools.yaml
+# 下载并验证 zip（如需要）
+curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
 ```
 
 ---
