@@ -57,6 +57,8 @@ fi
 # Bootstrap validators using mise (aqua)
 # Note: yq is no longer required for config parsing (using cue + jq instead)
 
+echo "=== Starting mise-seq ===" >&2
+
 if ! command -v cue >/dev/null 2>&1; then
 	log_info "Installing bootstrap: cue@${CUE_VERSION}"
 	run mise use -g "cue@${CUE_VERSION}" >/dev/null
