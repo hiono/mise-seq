@@ -55,8 +55,12 @@ if [ -n "$arg_tools" ]; then
 	else
 		if [ -f "$arg_tools" ]; then
 			cp "$arg_tools" "$T/tools.yaml"
+		elif [ -f "$PWD/$arg_tools" ]; then
+			cp "$PWD/$arg_tools" "$T/tools.yaml"
+		elif [ -f "$HOME/$arg_tools" ]; then
+			cp "$HOME/$arg_tools" "$T/tools.yaml"
 		else
-			echo "ERROR: tools.yaml not found: $arg_tools" >&2
+			echo "ERROR: tools.yaml not found: $arg_tools (checked: $arg_tools, $PWD/$arg_tools, $HOME/$arg_tools)" >&2
 			exit 1
 		fi
 	fi
