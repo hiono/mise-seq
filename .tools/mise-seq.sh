@@ -84,6 +84,11 @@ log_debug "cue output: ${cue_output:0:100}..."
 test_json="$(echo "$cue_output" 2>/dev/null || echo '{}')"
 log_debug "cfg_json returned: ${test_json:0:100}..."
 
+# cfg_json function - returns cached JSON
+cfg_json() {
+	echo "$test_json"
+}
+
 # Get tools_order array
 get_tools_order() {
 	log_debug "get_tools_order called"
