@@ -16,13 +16,40 @@ get_latest_tag() {
     fi
 }
 
+get_commit_sha() {
+    local ref="$1"
+    curl -fsSL --max-time 10 -H "User-Agent: mise-seq-installer" \
+        "https://api.github.com/repos/hiono/mise-seq/contents/install.sh?ref=$ref" 2>/dev/null | \
+        grep -o '"sha":"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/' | cut -c1-7
+}
+
+detect_ref_from_url() {
+    local url="$1"
+    echo "$url" | sed -E 's|https://raw.githubusercontent.com/hiono/mise-seq/([^/]+)/.*|\1|'
+}
+
 REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/$(get_latest_tag)"
+
+if [ -z "$arg_ref" ] && [ -n "$REPO_RAW_BASE" ]; then
+    :
+elif [ -z "$arg_ref" ]; then
+    arg_ref="main"
+fi
 
 case "$arg_ref" in
     main) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/main" ;;
     v[0-9]*) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$arg_ref" ;;
     https://raw.githubusercontent.com/*)
-        REPO_RAW_BASE="$(echo "$arg_ref" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|; s|/[^/]+$||')" ;;
+        local ref
+        ref="$(detect_ref_from_url "$arg_ref")"
+        local sha
+        sha="$(get_commit_sha "$ref")"
+        if [ -n "$sha" ]; then
+            REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$sha"
+        else
+            REPO_RAW_BASE="$(echo "$arg_ref" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|; s|/[^/]+$||')"
+        fi
+        ;;
     *)    REPO_RAW_BASE="${REPO_RAW_BASE:-$REPO_RAW_BASE_DEFAULT}" ;;
 esac
 
