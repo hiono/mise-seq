@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: |
           shellcheck -s sh install.sh || true
-          shellcheck -s bash .tools/install.sh || true
+          shellcheck -s bash .tools/mise-seq.sh || true
           shfmt -d . || true
           cue vet -c=false .tools/schema/mise-seq.cue .tools/tools.yaml -d '#MiseSeqConfig' || true
 
@@ -46,4 +46,4 @@ jobs:
 
       - name: Run sample install (repo-provided .tools/tools.yaml)
         run: |
-          ./.tools/install.sh
+          ./.tools/mise-seq.sh

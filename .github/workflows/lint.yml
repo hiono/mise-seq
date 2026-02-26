@@ -17,7 +17,7 @@ jobs:
           shellcheck -s sh install.sh
       - name: ShellCheck (bash)
         run: |
-          shellcheck -s bash .tools/install.sh || true
+          shellcheck -s bash .tools/mise-seq.sh || true
       - name: markdownlint
         run: |
           npx markdownlint-cli2 "README*.md" || true
