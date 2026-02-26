@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 echo "MISE-SEQ SCRIPT STARTED" >&2
 echo "DEBUG=$DEBUG" >&2
+echo "Line count: $(wc -l < "$0")" >&2
 
 TOOLS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CFG="${TOOLS_DIR}/tools.yaml"
@@ -38,10 +39,8 @@ require_cmd() {
 }
 
 require_cmd mise
-echo "=== After require_cmd mise ===" >&2
 log_debug "Checking mise command..."
 mkdir -p "$STATE_DIR"
-echo "=== After mkdir STATE_DIR ===" >&2
 
 MISE_SHIMS_DEFAULT="${HOME}/.local/share/mise/shims"
 MISE_DATA_DIR="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
@@ -62,18 +61,19 @@ fi
 # Note: yq is no longer required for config parsing (using cue + jq instead)
 
 echo "=== Starting mise-seq ===" >&2
+echo "=== Checking for cue ===" >&2
 
 if ! command -v cue >/dev/null 2>&1; then
+	echo "=== Installing cue ===" >&2
 	log_info "Installing bootstrap: cue@${CUE_VERSION}"
 	run mise use -g "cue@${CUE_VERSION}" >/dev/null
 fi
 
+echo "=== After cue check ===" >&2
 require_cmd cue
-echo "=== After require_cmd cue ===" >&2
 log_debug "CUE command found: $(command -v cue)"
 CUE="$(command -v cue)"
 
-echo "=== After setting CUE ===" >&2
 log_debug "Using config: $CFG"
 log_debug "Using schema: $SCHEMA_CUE"
 log_debug "State directory: $STATE_DIR"
