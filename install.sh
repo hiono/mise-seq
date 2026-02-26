@@ -74,4 +74,5 @@ cp "$T/tools.toml" "$TOOLS_DIR/tools.toml" 2>/dev/null || true
 cp "$T/mise-seq.cue" "$TOOLS_DIR/schema/mise-seq.cue"
 
 echo "Installed mise-seq runtime to: $TOOLS_DIR"
+export DEBUG="${DEBUG:-0}"
 exec "$TOOLS_DIR/mise-seq.sh"

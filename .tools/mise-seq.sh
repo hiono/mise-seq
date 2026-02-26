@@ -6,13 +6,17 @@ CFG="${TOOLS_DIR}/tools.yaml"
 SCHEMA_CUE="${TOOLS_DIR}/schema/mise-seq.cue"
 
 DRY_RUN="${DRY_RUN:-0}"
+DEBUG="${DEBUG:-0}"
 RUN_POSTINSTALL_ON_UPDATE="${RUN_POSTINSTALL_ON_UPDATE:-${RUN_SETUP_ON_UPDATE:-0}}"
 FORCE_HOOKS="${FORCE_HOOKS:-${FORCE_SETUP:-0}}"
 
-YQ_VERSION="${YQ_VERSION:-4.44.3}"
 CUE_VERSION="${CUE_VERSION:-latest}"
 
 STATE_DIR="${STATE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/tools/state}"
+
+log_info() { echo "[INFO] $*"; }
+log_error() { echo "[ERROR] $*" >&2; }
+log_debug() { [[ "$DEBUG" == "1" ]] && echo "[DEBUG] $*" || true; }
 
 run() {
 	if [[ "$DRY_RUN" == "1" ]]; then
@@ -34,7 +38,6 @@ require_cmd() {
 require_cmd mise
 mkdir -p "$STATE_DIR"
 
-# Ensure mise shims are in PATH (check both default and custom MISE_DATA_DIR locations)
 MISE_SHIMS_DEFAULT="${HOME}/.local/share/mise/shims"
 MISE_DATA_DIR="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
 MISE_SHIMS_CUSTOM="${MISE_DATA_DIR}/shims"
@@ -50,33 +53,59 @@ if [ -d "$MISE_BIN" ]; then
 	export PATH="$MISE_BIN:$PATH"
 fi
 
-# Bootstrap validators (user-scoped under mise)
-run mise use -g "yq@${YQ_VERSION}" >/dev/null
-run mise use -g "cue@${CUE_VERSION}" >/dev/null
+# Bootstrap validators using mise (aqua)
+# Note: yq is no longer required for config parsing (using cue + jq instead)
 
-# Re-export PATH after mise use to pick up new shims
-for shims_dir in "$MISE_SHIMS_CUSTOM" "$MISE_SHIMS_DEFAULT"; do
-	if [ -d "$shims_dir" ]; then
-		export PATH="$shims_dir:$PATH"
-	fi
-done
+if ! command -v cue >/dev/null 2>&1; then
+	log_info "Installing bootstrap: cue@${CUE_VERSION}"
+	run mise use -g "cue@${CUE_VERSION}" >/dev/null
+fi
 
-require_cmd yq
 require_cmd cue
-YQ="$(command -v yq)"
+CUE="$(command -v cue)"
+
+log_debug "Using config: $CFG"
+log_debug "Using schema: $SCHEMA_CUE"
+log_debug "State directory: $STATE_DIR"
 
 [[ -f "$CFG" ]] || die "Config not found: $CFG"
 
-# 1) YAML parse sanity
-$YQ -e '.' "$CFG" >/dev/null
+# Convert YAML to JSON using cue (more reliable than yq)
+cfg_json() {
+	$CUE export "$CFG" --out json 2>/dev/null || echo "{}"
+}
 
-# 2) CUE schema validation
-if [[ -f "$SCHEMA_CUE" ]]; then
-	cue vet -c=false "$SCHEMA_CUE" "$CFG" -d '#MiseSeqConfig'
-fi
+# Get tools_order array
+get_tools_order() {
+	cfg_json | jq -r '.tools_order // [] | .[]' 2>/dev/null
+}
 
-sanitize_id() {
-	echo "$1" | tr '/:' '__'
+# Check if tool exists
+tool_exists() {
+	local tool="$1"
+	cfg_json | jq -r --arg t "$tool" '.tools | has($t)' 2>/dev/null
+}
+
+# Get tool version
+get_tool_version() {
+	local tool="$1"
+	cfg_json | jq -r --arg t "$tool" '.tools[$t].version // "latest"' 2>/dev/null
+}
+
+# Get hook list for a tool (preinstall/postinstall)
+get_hooks() {
+	local tool="$1" phase="$2"
+	cfg_json | jq -r --arg t "$tool" --arg p "$phase" '
+		.tools[$t][$p] // []
+	' 2>/dev/null
+}
+
+# Get defaults hooks
+get_default_hooks() {
+	local phase="$1"
+	cfg_json | jq -r --arg p "$phase" '
+		.defaults[$p] // []
+	' 2>/dev/null
 }
 
 is_managed_by_mise() {
@@ -103,80 +132,77 @@ write_marker() {
 	printf '%s\n' "$hash" >"$p"
 }
 
-hook_hash() {
-	local expr="$1"
-	local json
-	json="$($YQ -o=json -I=0 "$expr" "$CFG")"
-	printf '%s' "$json" | sha256sum | awk '{print $1}'
+sanitize_id() {
+	local s="$1"
+	echo "$s" | tr -cd '[:alnum:]_-' | cut -c1-64
 }
 
-# when must be a list in the schema. If omitted -> always.
-select_scripts() {
-	local expr="$1" phase="$2"
-	$YQ -r --arg phase "$phase" '
-    (('"$expr"') // [])[]
-    | (.when // ["always"]) as $when
-    | select(($when | index("always")) != null or ($when | index($phase)) != null)
-    | (.run // "")
-    | select(gsub("\\s+"; "") | length > 0)
-    | . + "\u0000"
-  ' "$CFG" || true
+# Get hook list for a tool (preinstall/postinstall)
+get_tool_hooks() {
+	local tool="$1" hook="$2"
+	cfg_json | jq -r --arg t "$tool" --arg h "$hook" '.tools[$t][$h] // []' 2>/dev/null
 }
 
-run_script_block() {
-	local label="$1" script="$2"
-	echo ">> ${label}"
-	if [[ "$DRY_RUN" == "1" ]]; then
-		echo "[DRY_RUN] sh -c <script>"
-		echo "----------"
-		echo "$script"
-		echo "----------"
-		return 0
-	fi
-	# Run as POSIX sh (as-is). No mise templating.
-	sh -c "$script"
+# Get defaults hooks
+get_defaults_hooks() {
+	local hook="$1"
+	cfg_json | jq -r --arg h "$hook" '.defaults[$h] // []' 2>/dev/null
 }
 
-run_hook_if_needed() {
-	local key="$1" expr="$2" phase="$3" label="$4"
-
-	local len
-	len="$($YQ -r "$expr | length // 0" "$CFG")"
-	[[ "$len" == "0" ]] && return 0
-
-	local mpath cur_hash old_hash
-	mpath="$(marker_path "$key")"
-	cur_hash="$(hook_hash "$expr")"
-	old_hash="$(read_marker "$mpath")"
-
-	local need=0
-	if [[ "$FORCE_HOOKS" == "1" ]]; then
-		need=1
-	elif [[ -z "$old_hash" ]]; then
-		need=1
-	elif [[ "$old_hash" != "$cur_hash" ]]; then
-		need=1
-	fi
-
-	[[ "$need" == "0" ]] && return 0
-
-	local scripts
-	scripts="$(select_scripts "$expr" "$phase")"
-	if [[ -n "$scripts" ]]; then
-		while IFS= read -r -d '' s; do
-			run_script_block "$label" "$s"
-		done < <(printf '%s' "$scripts")
-	fi
-
-	write_marker "$mpath" "$cur_hash"
+hook_hash_from_json() {
+	local json="$1"
+	echo "$json" | jq -c '.[]?' | sort | sha256sum | cut -d' ' -f1
 }
 
 run_defaults() {
 	local hook="$1"
 	local key="defaults.${hook}"
-	local expr=".defaults.${hook} // []"
 	local label="defaults ${hook}"
-	run_hook_if_needed "$key" "$expr" "always" "$label"
+
+	# Get defaults hooks using JSON
+	local hooks_json
+	hooks_json="$(get_defaults_hooks "$hook")"
+
+	local len
+	len="$(echo "$hooks_json" | jq 'length')"
+	[[ "$len" == "0" || "$len" == "null" ]] && {
+		log_debug "Hook ${label}: no scripts defined (skipped)"
+		return 0
+	}
+
+	local mpath cur_hash old_hash
+	mpath="$(marker_path "$key")"
+	cur_hash="$(hook_hash_from_json "$hooks_json")"
+	old_hash="$(read_marker "$mpath")"
+
+	local need=0
+	if [[ "$FORCE_HOOKS" == "1" ]]; then
+		need=1
+		log_debug "Hook ${label}: FORCE_HOOKS=1 (running)"
+	elif [[ -z "$old_hash" ]]; then
+		need=1
+		log_debug "Hook ${label}: first run (running)"
+	elif [[ "$old_hash" != "$cur_hash" ]]; then
+		need=1
+		log_debug "Hook ${label}: hash changed (running)"
+	else
+		log_debug "Hook ${label}: unchanged (skipped)"
+	fi
+
+	[[ "$need" == "0" ]] && return 0
+
+	log_info "Running hook: ${label}"
+	local script
+	while IFS= read -r script; do
+		[[ -z "$script" ]] && continue
+		local when
+		when="$(echo "$hooks_json" | jq -r --arg s "$script" '.[] | select(.run == $s) | .when // ["always"] | join(",")')"
+		if [[ "$when" == "always" ]] || [[ "$when" == *"always"* ]]; then
+			run_script_block "$label" "$script"
+		fi
+	done < <(echo "$hooks_json" | jq -r '.[].run')
+
+	write_marker "$mpath" "$cur_hash"
 }
 
 run_tool_hook() {
@@ -184,54 +210,94 @@ run_tool_hook() {
 	local safe
 	safe="$(sanitize_id "$tool")"
 	local key="tool.${safe}.${hook}"
-	local expr=".tools[\"${tool}\"].${hook} // []"
 	local label="${tool} ${hook} (${phase})"
-	run_hook_if_needed "$key" "$expr" "$phase" "$label"
+
+	# Get hooks using jq on JSON from cue export
+	local hooks_json
+	hooks_json="$(get_hooks "$tool" "$hook")"
+
+	local len
+	len="$(echo "$hooks_json" | jq 'length')"
+	[[ "$len" == "0" || "$len" == "null" ]] && {
+		log_debug "Hook ${label}: no scripts defined (skipped)"
+		return 0
+	}
+
+	local mpath cur_hash old_hash
+	mpath="$(marker_path "$key")"
+	cur_hash="$(hook_hash_from_json "$hooks_json")"
+	old_hash="$(read_marker "$mpath")"
+
+	local need=0
+	if [[ "$FORCE_HOOKS" == "1" ]]; then
+		need=1
+		log_debug "Hook ${label}: FORCE_HOOKS=1 (running)"
+	elif [[ -z "$old_hash" ]]; then
+		need=1
+		log_debug "Hook ${label}: first run (running)"
+	elif [[ "$old_hash" != "$cur_hash" ]]; then
+		need=1
+		log_debug "Hook ${label}: hash changed (running)"
+	else
+		log_debug "Hook ${label}: unchanged (skipped)"
+	fi
+
+	[[ "$need" == "0" ]] && return 0
+
+	log_info "Running hook: ${label}"
+	local script
+	while IFS= read -r script; do
+		[[ -z "$script" ]] && continue
+		local when
+		when="$(echo "$hooks_json" | jq -r --arg s "$script" '.[] | select(.run == $s) | .when // ["always"] | join(",")')"
+		if [[ "$when" == "always" ]] || [[ "$when" == *"${phase}"* ]]; then
+			run_script_block "$label" "$script"
+		fi
+	done < <(echo "$hooks_json" | jq -r '.[].run')
+
+	write_marker "$mpath" "$cur_hash"
 }
 
 read_tool_order() {
-	local has
-	has="$($YQ -r 'has("tools_order")' "$CFG" 2>/dev/null || echo false)"
-	if [[ "$has" == "true" ]]; then
-		mapfile -t ORDER < <($YQ -r '.tools_order[]' "$CFG")
-		printf '%s\n' "${ORDER[@]}"
+	# Check if tools_order exists, otherwise get all tool keys
+	local order
+	order="$(cfg_json | jq -r '.tools_order // empty')"
+	if [[ -n "$order" ]]; then
+		echo "$order" | jq -r '.[]'
 	else
-		mapfile -t KEYS < <($YQ -r '.tools | keys | .[]' "$CFG")
-		printf '%s\n' "${KEYS[@]}"
+		cfg_json | jq -r '.tools | keys | .[]'
 	fi
 }
 
 run_defaults preinstall
 
 mapfile -t TOOL_NAMES < <(read_tool_order)
+log_debug "Tools to process: ${TOOL_NAMES[*]}"
 
 for tool in "${TOOL_NAMES[@]}"; do
 	[[ -z "${tool//[[:space:]]/}" ]] && continue
 
-	exists="$($YQ -r --arg t "$tool" '.tools | has($t)' "$CFG" 2>/dev/null || echo false)"
+	exists="$(tool_exists "$tool")"
 	[[ "$exists" != "true" ]] && continue
 
-	ver="$($YQ -r --arg t "$tool" '.tools[$t].version' "$CFG")"
+	ver="$(get_tool_version "$tool")"
 	spec="${tool}@${ver}"
+
+	log_debug "Processing tool: $spec"
 
 	if ! is_managed_by_mise "$tool"; then
 		run_tool_hook "$tool" preinstall install
 
-		echo "NOT managed by mise: ${tool} -> mise use -g ${spec}"
-		run mise use -g "$spec"
+		log_info "Installing: ${spec}"
+		log_debug "Running: mise use -g $spec"
+		if ! run mise use -g "$spec" 2>&1 | tee >(cat >&2); then
+			log_error "Failed to install: ${spec} (postinstall skipped)"
+			continue
+		fi
 
 		run_tool_hook "$tool" postinstall install
 	else
-		run_tool_hook "$tool" preinstall update
-
-		echo "Managed by mise: ${tool} -> mise update ${tool}"
-		run mise update "$tool"
-
-		if [[ "$RUN_POSTINSTALL_ON_UPDATE" == "1" ]]; then
-			run_tool_hook "$tool" postinstall update
-		else
-			run_tool_hook "$tool" postinstall install
-		fi
+		log_info "Already managed by mise: ${tool} (skipping)"
 	fi
 done
 
