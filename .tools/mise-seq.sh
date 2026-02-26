@@ -70,9 +70,10 @@ log_debug "Using config: $CFG"
 log_debug "Using schema: $SCHEMA_CUE"
 log_debug "State directory: $STATE_DIR"
 
+log_debug "Checking config file..."
 [[ -f "$CFG" ]] || die "Config not found: $CFG"
 
-log_debug "About to call cfg_json..."
+log_debug "Config file exists, calling cfg_json..."
 # Convert YAML to JSON using cue (more reliable than yq)
 cfg_json() {
 	$CUE export "$CFG" --out json 2>/dev/null || echo "{}"
