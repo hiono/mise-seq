@@ -47,9 +47,9 @@ download "$REPO_RAW_BASE/SHA256SUMS" "$T/SHA256SUMS"
 for f in \
 	.tools/mise-seq.sh \
 	.tools/tools.yaml \
-	.tools/tools.sample.toml \
+	.tools/tools.toml \
 	.tools/schema/mise-seq.cue; do
-	download "$REPO_RAW_BASE/$f" "$T/$(basename "$f")"
+	download "$REPO_RAW_BASE/$f" "$T/$f"
 	verify_one "$f"
 done
 
@@ -70,8 +70,8 @@ fi
 
 cp "$T/mise-seq.sh" "$TOOLS_DIR/mise-seq.sh"
 cp "$T/tools.yaml" "$TOOLS_DIR/tools.yaml"
-cp "$T/tools.sample.toml" "$TOOLS_DIR/tools.sample.toml" 2>/dev/null || true
-cp "$T/mise-seq.cue" "$TOOLS_DIR/schema/mise-seq.cue"
+cp "$T/tools.toml" "$TOOLS_DIR/tools.toml" 2>/dev/null || true
+cp "$T/schema/mise-seq.cue" "$TOOLS_DIR/schema/mise-seq.cue"
 
 echo "Installed mise-seq runtime to: $TOOLS_DIR"
 exec "$TOOLS_DIR/mise-seq.sh"
