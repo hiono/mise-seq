@@ -68,12 +68,52 @@ tools_order:
 - `preinstall`
 - `postinstall`
 
-示例如下。
+以下为示例及实际使用方法。
+
+### 版本确认
 
 ```yaml
-preinstall:
-  - run: echo "安装前"
-    when: [install, update]
+tools:
+  jq:
+    version: latest
+    postinstall:
+      - when: [install, update]
+        run: |
+          set -eu
+          jq --version
+```
+
+### 初始化配置目录
+
+```yaml
+tools:
+  lazygit:
+    version: latest
+    postinstall:
+      - when: [install]
+        run: |
+          set -eu
+          mkdir -p "$HOME/.config/lazygit"
+```
+
+### 生成配置模板（不覆盖已存在的文件）
+
+```yaml
+tools:
+  rg:
+    version: latest
+    postinstall:
+      - when: [install]
+        run: |
+          set -eu
+          cfg="$HOME/.config/ripgrep/config"
+          if [ ! -f "$cfg" ]; then
+            mkdir -p "$(dirname "$cfg")"
+            cat >"$cfg" <<'EOF'
+--smart-case
+--hidden
+EOF
+          fi
 ```
 
 ### 执行规则
@@ -94,17 +134,18 @@ mise-seq 在执行前执行以下验证：
 
 ```sh
 yq -e '.' tools.yaml
-cue vet -c=false schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
+cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
 ```
 
 ---
 
 ## 示例配置
 
-仓库中包含 `.tools/tools.yaml` 作为示例配置。
+仓库中包含 `.tools/tools.yaml` 和 `.tools/tools.toml` 作为示例配置。
 
 - 非必需
 - 无特殊行为
+- 包含注释以展示钩子结构
 - 仅用于参考和发布前验证
 
 主要输入始终是用户提供的 `tools.yaml`。
