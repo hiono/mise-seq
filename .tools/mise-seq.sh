@@ -84,15 +84,29 @@ apply_mise_settings() {
 import_tools_to_mise() {
 	log_info "Importing tools from config to mise..."
 	
-	# mise install reads tools.yaml directly, just run it
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	
+	if [ -z "$cfg" ]; then
+		log_debug "No config exported"
+		return
+	fi
+
+	log_info "Tools found, adding to mise..."
+	
+	# Extract tools using grep - find all tool entries with version
+	echo "$cfg" | grep -oE '"[a-zA-Z0-9:_/-]+":\s*\{[^}]*"version":\s*"[^"]*"' | while read -r line; do
+		tool="$(echo "$line" | sed 's/:.*//' | tr -d '"')"
+		version="$(echo "$line" | grep -o '"version":\s*"[^"]*"' | cut -d'"' -f4)"
+		if [ -n "$tool" ] && [ -n "$version" ]; then
+			log_info "Adding tool: $tool@$version"
+			mise add "$tool@$version" 2>/dev/null || true
+		fi
+	done
+	
+	# Also try running mise install for any local mise configs
 	log_info "Running mise install..."
 	mise install 2>/dev/null || true
-	
-	# Also add tools from TOOLS_YAML if different
-	if [ -n "${TOOLS_YAML:-}" ] && [ -f "$TOOLS_YAML" ]; then
-		log_info "Running mise install for $TOOLS_YAML..."
-		mise install -c "$TOOLS_YAML" 2>/dev/null || true
-	fi
 }
 
 echo "=== Starting mise-seq ===" >&2
