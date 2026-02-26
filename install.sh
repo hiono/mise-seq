@@ -125,8 +125,6 @@ cp "$T/mise-seq.cue" "$TOOLS_DIR/schema/mise-seq.cue"
 
 echo "Installed mise-seq runtime to: $TOOLS_DIR"
 export DEBUG="${DEBUG:-0}"
-if [ "$DEBUG" = "1" ]; then
-    exec bash -x "$TOOLS_DIR/mise-seq.sh"
-else
-    exec "$TOOLS_DIR/mise-seq.sh"
+echo "Running mise-seq.sh directly..."
+/bin/bash "$TOOLS_DIR/mise-seq.sh"
 fi
