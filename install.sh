@@ -22,7 +22,7 @@ case "$arg_ref" in
     main) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/main" ;;
     v[0-9]*) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$arg_ref" ;;
     https://raw.githubusercontent.com/*)
-        REPO_RAW_BASE="$(echo "$arg_ref" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|')" ;;
+        REPO_RAW_BASE="$(echo "$arg_ref" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|; s|/[^/]+$||')" ;;
     *)    REPO_RAW_BASE="${REPO_RAW_BASE:-$REPO_RAW_BASE_DEFAULT}" ;;
 esac
 
