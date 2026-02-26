@@ -84,26 +84,15 @@ apply_mise_settings() {
 import_tools_to_mise() {
 	log_info "Importing tools from config to mise..."
 	
-	# Use cue to get tool names and versions
-	local tools_list
-	tools_list="$($CUE export "$CFG" --out json 2>/dev/null)"
+	# mise install reads tools.yaml directly, just run it
+	log_info "Running mise install..."
+	mise install 2>/dev/null || true
 	
-	if [ -z "$tools_list" ]; then
-		log_debug "No config exported"
-		return
+	# Also add tools from TOOLS_YAML if different
+	if [ -n "${TOOLS_YAML:-}" ] && [ -f "$TOOLS_YAML" ]; then
+		log_info "Running mise install for $TOOLS_YAML..."
+		mise install -c "$TOOLS_YAML" 2>/dev/null || true
 	fi
-
-	log_info "Tools found, adding to mise..."
-	
-	# Extract tools from both 'tools' and 'default.tools' using grep/sed
-	echo "$tools_list" | grep -oE '"[a-zA-Z0-9:_/-]+":\s*{"version":"[^"]*"' | while read -r line; do
-		tool="$(echo "$line" | sed 's/:.*//' | tr -d '"')"
-		version="$(echo "$line" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)"
-		if [ -n "$tool" ] && [ -n "$version" ]; then
-			log_info "Adding tool: $tool@$version"
-			mise add "$tool@$version" 2>/dev/null || true
-		fi
-	done
 }
 
 echo "=== Starting mise-seq ===" >&2
@@ -156,7 +145,8 @@ get_tools_order() {
 	log_debug "get_tools_order called"
 	local cfg
 	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
-	order="$(echo "$cfg" | grep -oE '"tools_order":\s*\[[^\]]*\]' | sed 's/.*\[//' | tr ',' '\n' | sed 's/.*"\([^"]*\)".*/\1/' | grep -v '^$')"
+	# Extract tools_order from JSON using grep/sed
+	order="$(echo "$cfg" | grep -oE '"tools_order":\s*\[[^\]]*\]' | sed 's/.*\[//' | tr -d '[]"\n' | tr ',' '\n' | grep -v '^$')"
 	log_debug "tools_order: $order"
 	echo "$order"
 }
@@ -174,7 +164,25 @@ get_tool_version() {
 	local tool="$1"
 	local cfg
 	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
-	echo "$cfg" | grep -oE "\"$tool\":\s*{[^}]*\"version\":\s*\"[^\"]*\"" | grep -oE '"version":\s*"[^"]*"' | cut -d'"' -f4 | head -1
+	version="$(echo "$cfg" | grep -oE "\"$tool\":\s*\{[^}]*\"version\":\s*\"[^\"]*\"" | grep -oE '"version":\s*"[^"]*"' | cut -d'"' -f4 | head -1)"
+	echo "${version:-latest}"
+}
+
+# Get hook list for a tool (preinstall/postinstall)
+get_hooks() {
+	local tool="$1" phase="$2"
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	# Extract hooks using grep - find tool section, then extract phase array
+	echo "$cfg" | grep -oE "\"$tool\":\s*\{[^}]*\"$phase\":\s*\[[^\]]*\]" | sed "s/.*\"$phase\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
+}
+
+# Get defaults hooks
+get_default_hooks() {
+	local phase="$1"
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	echo "$cfg" | grep -oE "\"defaults\":\s*\{[^}]*\"$phase\":\s*\[[^\]]*\]" | sed "s/.*\"$phase\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
 }
 
 # Get hook list for a tool (preinstall/postinstall)
@@ -225,18 +233,25 @@ sanitize_id() {
 # Get hook list for a tool (preinstall/postinstall)
 get_tool_hooks() {
 	local tool="$1" hook="$2"
-	cfg_json | jq -r --arg t "$tool" --arg h "$hook" '.tools[$t][$h] // []' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	# Extract hooks from tool section using grep
+	echo "$cfg" | grep -oE "\"$tool\":\s*\{[^}]*\"$hook\":\s*\[[^\]]*\]" | sed "s/.*\"$hook\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
 }
 
 # Get defaults hooks
 get_defaults_hooks() {
 	local hook="$1"
-	cfg_json | jq -r --arg h "$hook" '.defaults[$h] // []' 2>/dev/null
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	# Extract hooks from defaults section using grep
+	echo "$cfg" | grep -oE "\"defaults\":\s*\{[^}]*\"$hook\":\s*\[[^\]]*\]" | sed "s/.*\"$hook\":\s*\[//" | tr -d '[]"' | tr ',' '\n'
 }
 
 hook_hash_from_json() {
 	local json="$1"
-	echo "$json" | jq -c '.[]?' | sort | sha256sum | cut -d' ' -f1
+	# Simple hash without jq
+	echo "$json" | tr -d '\n' | sha256sum | cut -d' ' -f1
 }
 
 run_defaults() {
@@ -249,8 +264,8 @@ run_defaults() {
 	hooks_json="$(get_defaults_hooks "$hook")"
 
 	local len
-	len="$(echo "$hooks_json" | jq 'length')"
-	[[ "$len" == "0" || "$len" == "null" ]] && {
+	len="$(echo "$hooks_json" | grep -c 'run')" || len=0
+	[[ "$len" == "0" ]] && {
 		log_debug "Hook ${label}: no scripts defined (skipped)"
 		return 0
 	}
@@ -278,14 +293,14 @@ run_defaults() {
 
 	log_info "Running hook: ${label}"
 	local script
-	while IFS= read -r script; do
-		[[ -z "$script" ]] && continue
-		local when
-		when="$(echo "$hooks_json" | jq -r --arg s "$script" '.[] | select(.run == $s) | .when // ["always"] | join(",")')"
-		if [[ "$when" == "always" ]] || [[ "$when" == *"always"* ]]; then
-			run_script_block "$label" "$script"
-		fi
-	done < <(echo "$hooks_json" | jq -r '.[].run')
+	# Extract run scripts from hooks_json - each block is separated by "run":"
+	while echo "$hooks_json" | grep -q '"run"'; do
+		script="$(echo "$hooks_json" | grep -oE '"run":\s*"[^"]*"' | head -1 | sed 's/.*"run":\s*"//;s/"$//' | sed 's/\\n/\n/g')"
+		[[ -z "$script" ]] && break
+		run_script_block "$label" "$script"
+		# Remove processed script
+		hooks_json="$(echo "$hooks_json" | sed 's/.*"run":\s*"[^"]*"//')"
+	done
 
 	write_marker "$mpath" "$cur_hash"
 }
@@ -297,13 +312,13 @@ run_tool_hook() {
 	local key="tool.${safe}.${hook}"
 	local label="${tool} ${hook} (${phase})"
 
-	# Get hooks using jq on JSON from cue export
+	# Get hooks using grep on JSON from cue export
 	local hooks_json
 	hooks_json="$(get_hooks "$tool" "$hook")"
 
 	local len
-	len="$(echo "$hooks_json" | jq 'length')"
-	[[ "$len" == "0" || "$len" == "null" ]] && {
+	len="$(echo "$hooks_json" | grep -c 'run')" || len=0
+	[[ "$len" == "0" ]] && {
 		log_debug "Hook ${label}: no scripts defined (skipped)"
 		return 0
 	}
@@ -331,26 +346,32 @@ run_tool_hook() {
 
 	log_info "Running hook: ${label}"
 	local script
-	while IFS= read -r script; do
-		[[ -z "$script" ]] && continue
-		local when
-		when="$(echo "$hooks_json" | jq -r --arg s "$script" '.[] | select(.run == $s) | .when // ["always"] | join(",")')"
-		if [[ "$when" == "always" ]] || [[ "$when" == *"${phase}"* ]]; then
-			run_script_block "$label" "$script"
-		fi
-	done < <(echo "$hooks_json" | jq -r '.[].run')
+	# Extract run scripts from hooks_json - each block is separated by "run":"
+	while echo "$hooks_json" | grep -q '"run"'; do
+		script="$(echo "$hooks_json" | grep -oE '"run":\s*"[^"]*"' | head -1 | sed 's/.*"run":\s*"//;s/"$//' | sed 's/\\n/\n/g')"
+		[[ -z "$script" ]] && break
+		run_script_block "$label" "$script"
+		# Remove processed script
+		hooks_json="$(echo "$hooks_json" | sed 's/.*"run":\s*"[^"]*"//')"
+	done
 
 	write_marker "$mpath" "$cur_hash"
 }
 
 read_tool_order() {
 	# Check if tools_order exists, otherwise get all tool keys
+	local cfg
+	cfg="$($CUE export "$CFG" --out json 2>/dev/null)"
+	
+	# Try tools_order first
 	local order
-	order="$(cfg_json | jq -r '.tools_order // empty')"
+	order="$(echo "$cfg" | grep -oE '"tools_order":\s*\[[^\]]*\]' | sed 's/.*\[//' | tr -d '[]"\n' | tr ',' '\n')"
+	
 	if [[ -n "$order" ]]; then
-		echo "$order" | jq -r '.[]'
+		echo "$order"
 	else
-		cfg_json | jq -r '.tools | keys | .[]'
+		# Get all tool keys from tools section
+		echo "$cfg" | grep -oE '"[a-zA-Z0-9:_/-]+":\s*\{' | sed 's/.*"\([^"]*\)".*/\1/'
 	fi
 }
 
