@@ -30,7 +30,7 @@ detect_ref_from_url() {
 
 REPO_RAW_BASE_DEFAULT="https://raw.githubusercontent.com/hiono/mise-seq/$(get_latest_tag)"
 
-if [ -z "$arg_ref" ] && [ -n "$REPO_RAW_BASE" ]; then
+if [ -z "$arg_ref" ] && [ -n "${REPO_RAW_BASE:-}" ]; then
     :
 elif [ -z "$arg_ref" ]; then
     arg_ref="main"
@@ -40,9 +40,7 @@ case "$arg_ref" in
     main) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/main" ;;
     v[0-9]*) REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$arg_ref" ;;
     https://raw.githubusercontent.com/*)
-        local ref
         ref="$(detect_ref_from_url "$arg_ref")"
-        local sha
         sha="$(get_commit_sha "$ref")"
         if [ -n "$sha" ]; then
             REPO_RAW_BASE="https://raw.githubusercontent.com/hiono/mise-seq/$sha"
