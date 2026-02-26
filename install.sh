@@ -19,7 +19,11 @@ download() {
 	url="$1"
 	out="$2"
 	mkdir -p "$(dirname "$out")"
-	curl -fsSL "$url" >"$out"
+	echo "Downloading: $url -> $out" >&2
+	curl -fsSL --fail "$url" -o "$out" || {
+		echo "ERROR: failed to download: $url" >&2
+		exit 1
+	}
 }
 
 if ! command -v mise >/dev/null 2>&1; then
