@@ -61,20 +61,20 @@ fi
 # Note: yq is no longer required for config parsing (using cue + jq instead)
 
 apply_mise_settings() {
-	if ! command -v jq >/dev/null 2>&1; then
-		log_debug "jq not available, skipping settings"
-		return
-	fi
-
+	log_info "Applying mise settings from config..."
+	
+	# Use yq to convert 'default' to 'defaults' and extract settings
 	local settings_json
-	settings_json="$(cfg_json | jq -r '.settings // {}')"
+	settings_json="$(yq -o json '.settings // {}' "$CFG" 2>/dev/null)" || \
+		settings_json="$(yq -o json '.default.settings // {}' "$CFG" 2>/dev/null)" || \
+		settings_json="$(echo "$cfg_json" | jq -r '.settings // {}')"
 	
 	if [ "$settings_json" = "{}" ] || [ -z "$settings_json" ]; then
 		log_debug "No settings found in config"
 		return
 	fi
 
-	log_info "Applying mise settings from config..."
+	log_info "Applying mise settings..."
 	echo "$settings_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
 		if [ -n "$key" ]; then
 			log_debug "Setting: $key = $value"
@@ -90,16 +90,21 @@ import_tools_to_mise() {
 	fi
 
 	log_info "Importing tools from config to mise..."
+	
+	# Use yq to convert 'default' to 'defaults' and extract tools
 	local tools_json
-	tools_json="$(cfg_json | jq -r '.tools // {}')"
+	tools_json="$(yq -o json '.tools // {}' "$CFG" 2>/dev/null)" || \
+		tools_json="$(echo "$cfg_json" | jq -r '.tools // {}')"
 	
 	if [ "$tools_json" = "{}" ] || [ -z "$tools_json" ]; then
-		log_debug "No tools found in config"
+		log_debug "No tools found in config: $CFG"
+		log_debug "Checking CFG content: $(head -c 500 "$CFG")"
 		return
 	fi
 
+	log_info "Tools found, adding to mise..."
 	echo "$tools_json" | jq -r 'to_entries[] | "\(.key) \(.value.version)"' | while read -r tool version; do
-		if [ -n "$tool" ]; then
+		if [ -n "$tool" ] && [ -n "$version" ]; then
 			log_info "Adding tool: $tool@$version"
 			mise add "$tool@$version" 2>/dev/null || true
 		fi
