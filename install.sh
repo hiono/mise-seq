@@ -49,24 +49,23 @@ done
 chmod +x "$T/mise-seq.sh"
 
 # tools.yaml selection
+# Usage: curl .../install.sh [url|absolute-path]
+# If omitted, uses bundled tools.yaml from repo
 if [ -n "$arg_tools" ]; then
 	if is_url "$arg_tools"; then
 		download "$arg_tools" "$T/tools.yaml"
 	else
-		if [ -f "$arg_tools" ]; then
-			cp "$arg_tools" "$T/tools.yaml"
-		elif [ -f "$PWD/$arg_tools" ]; then
-			cp "$PWD/$arg_tools" "$T/tools.yaml"
-		elif [ -f "$HOME/$arg_tools" ]; then
-			cp "$HOME/$arg_tools" "$T/tools.yaml"
-		else
-			echo "ERROR: tools.yaml not found: $arg_tools (checked: $arg_tools, $PWD/$arg_tools, $HOME/$arg_tools)" >&2
+		# Require absolute path for local files
+		case "$arg_tools" in
+		/*) [ -f "$arg_tools" ] && cp "$arg_tools" "$T/tools.yaml" ;;
+		*)
+			echo "ERROR: Local file requires absolute path: $arg_tools" >&2
+			echo "Usage: curl .../install.sh https://example.com/tools.yaml" >&2
+			echo "   or: curl .../install.sh /absolute/path/to/tools.yaml" >&2
 			exit 1
-		fi
+			;;
+		esac
 	fi
-else
-	# Use bundled tools.yaml from repo
-	:
 fi
 
 cp "$T/mise-seq.sh" "$TOOLS_DIR/mise-seq.sh"
