@@ -1,17 +1,14 @@
 project_name: mise-seq
+
 archives:
   - id: mise-seq
-    builds:
-      - mise-seq
     formats:
       - tar.gz
       - zip
-    files:
-      - README.md
-      - LICENSE
+
 builds:
   - id: mise-seq
-    main: .
+    main: ./...
     goos:
       - linux
       - darwin
@@ -21,10 +18,13 @@ builds:
       - arm64
     ldflags:
       - -s -w
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   filters:
@@ -32,8 +32,8 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^chore:'
+
 release:
   github:
-    owner: mise-seq
-    name: config-loader
-  draft: true
+    owner: hiono
+    name: mise-seq
