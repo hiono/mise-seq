@@ -51,6 +51,16 @@ func (b *Bootstrapper) FindMise() (string, error) {
 		}
 	}
 
+	// Check default install location (~/.local/bin/mise)
+	home := os.Getenv("HOME")
+	if home != "" {
+		defaultMisePath := filepath.Join(home, ".local", "bin", "mise")
+		if _, err := os.Stat(defaultMisePath); err == nil {
+			b.misePath = defaultMisePath
+			return defaultMisePath, nil
+		}
+	}
+
 	return "", fmt.Errorf("mise not found")
 }
 
@@ -173,6 +183,15 @@ func (b *Bootstrapper) EnsureMise(ctx context.Context) error {
 
 	config.Info("Installed mise to: %s", misePath)
 	b.misePath = misePath
+
+	// Add to PATH for current process
+	currentPath := os.Getenv("PATH")
+	newPath := installDir + string(os.PathListSeparator) + currentPath
+	if !strings.Contains(currentPath, installDir) {
+		os.Setenv("PATH", newPath)
+		config.Info("Added %s to PATH", installDir)
+	}
+
 	return nil
 }
 

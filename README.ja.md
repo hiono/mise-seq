@@ -358,17 +358,8 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 miseがシステムにインストールされていない場合：
 - ~/.local/bin/mise に自動ダウンロード
-- curlまたはwgetが必要
-
-**インストール後の手動設定:**
-
-```bash
-# PATHに追加
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-
-# shell有効化
-eval "$(mise activate bash)"
-```
+- ダウンロード後、自動的にPATHに追加
+- 以降のコマンドでmiseが利用可能
 
 ---
 
