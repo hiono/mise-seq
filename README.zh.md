@@ -398,7 +398,13 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 ## 前置条件
 
 - Go 1.21+
-- [mise](https://github.com/jdx/mise) CLI 已系统级安装
+
+### 自动安装行为
+
+如果系统上未安装 mise：
+- 自动安装 mise 到 ~/.local/bin/mise
+- 需要 curl 或 wget
+- 安装后添加到 PATH
 
 ---
 

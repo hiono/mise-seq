@@ -398,7 +398,13 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 ## Prerequisites
 
 - Go 1.21+
-- [mise](https://github.com/jdx/mise) CLI installed system-wide
+
+### Auto-install behavior
+
+If mise is not installed on the system:
+- Automatically installs mise to ~/.local/bin/mise
+- Requires curl or wget
+- Adds to PATH after installation
 
 ---
 
