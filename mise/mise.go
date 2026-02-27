@@ -277,7 +277,12 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	}
 
 	// Install tool
-	toolSpec := fmt.Sprintf("%s@%s", toolName, tool.Version)
+	// Use exe if specified, otherwise use toolName
+	exeName := tool.Exe
+	if exeName == "" {
+		exeName = toolName
+	}
+	toolSpec := fmt.Sprintf("%s@%s", exeName, tool.Version)
 	_, result, err := c.InstallIfNotInstalled(ctx, toolSpec)
 	if err != nil {
 		return fmt.Errorf("install failed for %s: %w", toolName, err)
