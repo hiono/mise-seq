@@ -167,6 +167,56 @@ MiseSeqConfig: {
 }
 ```
 
+### 設定リファレンス
+
+すべてのフィールドは**省略可能**です（未指定はデフォルト値）。
+
+#### ツールフィールド
+
+| フィールド | 型 | 必須 | デフォルト | 説明 |
+|-----------|------|------|-----------|------|
+| `version` | string | ✗ | `"latest"` | ツールバージョン（例: `"1.22"`, `"latest"`, `""`） |
+| `exe` | string | ✗ | `<ツール名>` | 実行ファイル名（ツールキーと異なる場合） |
+| `depends` | array | ✗ | `[]` | 依存関係: `["tool@version"]` または `["tool"]`（= latest） |
+| `preinstall` | array | ✗ | `[]` | インストール前に実行するフック |
+| `postinstall` | array | ✗ | `[]` | インストール後に実行するフック |
+
+#### 依存関係の記法
+
+```yaml
+# 完全記法
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc@latest    # 明示的な @version
+      - cargo@latest  # 明示的な @latest
+
+# 省略記法（推奨）
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc    # gcc@latest と同じ
+      - cargo  # cargo@latest と同じ
+```
+
+**ポイント:**
+- `@version` は省略可能 → 省略すると `@latest`
+- `version` フィールドは省略可能 → 省略すると `"latest"`
+- `exe` フィールドは省略可能 → 省略するとツールキー名
+- 空配列 `[]` はフィールド省略と同じ
+
+#### 最小設定（すべて省略）
+
+```yaml
+# すべてデフォルト: version=latest, exe=ツール名, depends=[]
+tools:
+  jq:
+  gcc:
+  rust:
+```
+
 ---
 
 ## フック

@@ -167,6 +167,56 @@ MiseSeqConfig: {
 }
 ```
 
+### Configuration Reference
+
+All fields are **optional** unless marked as **required**.
+
+#### Tool Fields
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `version` | string | No | `"latest"` | Tool version (e.g., `"1.22"`, `"latest"`, `""`) |
+| `exe` | string | No | `<tool name>` | Executable name (if different from tool key) |
+| `depends` | array | No | `[]` | Dependencies: `["tool@version"]` or `["tool"]` (= latest) |
+| `preinstall` | array | No | `[]` | Hooks to run before installation |
+| `postinstall` | array | No | `[]` | Hooks to run after installation |
+
+#### Dependency Syntax
+
+```yaml
+# Full syntax
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc@latest    # explicit @version
+      - cargo@latest  # explicit @latest
+
+# Shorthand (recommended)
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc    # same as gcc@latest
+      - cargo  # same as cargo@latest
+```
+
+**Key Points:**
+- `@version` can be omitted → defaults to `@latest`
+- `version` field can be omitted → defaults to `"latest"` 
+- `exe` field can be omitted → defaults to tool key name
+- Empty array `[]` is equivalent to omitted field
+
+#### Minimal Configuration (All Omitted)
+
+```yaml
+# All defaults: version=latest, exe=tool name, depends=[]
+tools:
+  jq:
+  gcc:
+  rust:
+```
+
 ---
 
 ## Hooks

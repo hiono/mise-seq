@@ -167,6 +167,56 @@ MiseSeqConfig: {
 }
 ```
 
+### 配置参考
+
+所有字段都是**可选的**（未指定时使用默认值）。
+
+#### 工具字段
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `version` | string | 否 | `"latest"` | 工具版本（如 `"1.22"`, `"latest"`, `""`） |
+| `exe` | string | 否 | `<工具名>` | 可执行文件名（与工具键名不同时） |
+| `depends` | array | 否 | `[]` | 依赖: `["tool@version"]` 或 `["tool"]`（= latest） |
+| `preinstall` | array | 否 | `[]` | 安装前运行的钩子 |
+| `postinstall` | array | 否 | `[]` | 安装后运行的钩子 |
+
+#### 依赖语法
+
+```yaml
+# 完整语法
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc@latest    # 显式指定 @version
+      - cargo@latest  # 显式指定 @latest
+
+# 简写（推荐）
+tools:
+  rust:
+    version: 1.88
+    depends:
+      - gcc    # 等同于 gcc@latest
+      - cargo  # 等同于 cargo@latest
+```
+
+**要点:**
+- `@version` 可省略 → 默认为 `@latest`
+- `version` 字段可省略 → 默认为 `"latest"`
+- `exe` 字段可省略 → 默认为工具键名
+- 空数组 `[]` 等同于省略字段
+
+#### 最小配置（全部省略）
+
+```yaml
+# 全部默认: version=latest, exe=工具名, depends=[]
+tools:
+  jq:
+  gcc:
+  rust:
+```
+
 ---
 
 ## 钩子
