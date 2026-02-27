@@ -141,3 +141,70 @@ func TestGetDefaultsHooks_Nil(t *testing.T) {
 		t.Error("Expected nil hooks for empty config")
 	}
 }
+
+func TestValidateConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		cfg       *Config
+		expectErr bool
+		errMsg    string
+	}{
+		{
+			name:      "nil config",
+			cfg:       nil,
+			expectErr: false,
+		},
+		{
+			name:      "empty config",
+			cfg:       &Config{},
+			expectErr: false,
+		},
+		{
+			name: "valid config with tools_order",
+			cfg: &Config{
+				Tools: map[string]Tool{
+					"jq":   {Version: "latest"},
+					"node": {Version: "20"},
+				},
+				ToolsOrder: []string{"jq", "node"},
+			},
+			expectErr: false,
+		},
+		{
+			name: "tools_order not in tools",
+			cfg: &Config{
+				Tools: map[string]Tool{
+					"jq": {Version: "latest"},
+				},
+				ToolsOrder: []string{"jq", "node"},
+			},
+			expectErr: true,
+			errMsg:    "tool_order contains 'node' which is not in tools",
+		},
+		{
+			name: "empty tools_order with tools",
+			cfg: &Config{
+				Tools:      map[string]Tool{"jq": {Version: "latest"}},
+				ToolsOrder: []string{},
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfig(tt.cfg)
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				} else if tt.errMsg != "" && err.Error() != tt.errMsg {
+					t.Errorf("Expected error '%s', got '%s'", tt.errMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}

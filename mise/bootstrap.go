@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/mise-seq/config-loader/config"
@@ -116,9 +117,63 @@ func (b *Bootstrapper) EnsureMise(ctx context.Context) error {
 		return nil // mise already available
 	}
 
-	config.Info("mise not found, please install mise first")
-	config.Info("See: https://github.com/jdx/mise")
-	return fmt.Errorf("mise not found")
+	config.Info("mise not found, installing...")
+
+	// Detect OS
+	goos := runtime.GOOS
+	arch := runtime.GOARCH
+
+	var ext string
+	if goos == "windows" {
+		ext = ".exe"
+	}
+
+	// Install to ~/.local/bin/mise
+	home := os.Getenv("HOME")
+	if home == "" {
+		return fmt.Errorf("HOME not set, cannot install mise")
+	}
+
+	installDir := filepath.Join(home, ".local", "bin")
+	if err := os.MkdirAll(installDir, 0755); err != nil {
+		return fmt.Errorf("failed to create install dir: %w", err)
+	}
+
+	misePath := filepath.Join(installDir, "mise"+ext)
+
+	// Download mise
+	version := b.version
+	if version == "" {
+		version = "latest"
+	}
+
+	url := fmt.Sprintf("https://github.com/jdx/mise/releases/%s/download/mise-%s-%s-%s%s",
+		version, version, goos, arch, ext)
+
+	config.Info("Downloading mise from: %s", url)
+
+	// Use curl or wget
+	var downloadCmd *exec.Cmd
+	if _, err := exec.LookPath("curl"); err == nil {
+		downloadCmd = exec.Command("curl", "-fSL", "-o", misePath, url)
+	} else if _, err := exec.LookPath("wget"); err == nil {
+		downloadCmd = exec.Command("wget", "-O", misePath, url)
+	} else {
+		return fmt.Errorf("neither curl nor wget available")
+	}
+
+	if err := downloadCmd.Run(); err != nil {
+		return fmt.Errorf("failed to download mise: %w", err)
+	}
+
+	// Make executable
+	if err := os.Chmod(misePath, 0755); err != nil {
+		return fmt.Errorf("failed to chmod mise: %w", err)
+	}
+
+	config.Info("Installed mise to: %s", misePath)
+	b.misePath = misePath
+	return nil
 }
 
 // HasRequiredTools checks if required tools are available

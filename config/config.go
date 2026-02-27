@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 // When defines when a hook should run
 type When string
 
@@ -89,4 +91,27 @@ func (c *Config) MergeDefaults() {
 
 		c.Tools[name] = tool
 	}
+}
+
+// ValidateConfig validates the configuration
+func ValidateConfig(cfg *Config) error {
+	if cfg == nil {
+		return nil
+	}
+
+	// Check tools_order is subset of tools
+	if cfg.ToolsOrder != nil && cfg.Tools != nil {
+		toolSet := make(map[string]bool)
+		for name := range cfg.Tools {
+			toolSet[name] = true
+		}
+
+		for _, name := range cfg.ToolsOrder {
+			if !toolSet[name] {
+				return fmt.Errorf("tool_order contains '%s' which is not in tools", name)
+			}
+		}
+	}
+
+	return nil
 }

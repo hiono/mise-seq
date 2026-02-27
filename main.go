@@ -116,6 +116,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Validate config
+	if err := config.ValidateConfig(cfg); err != nil {
+		config.Error("Invalid config: %v", err)
+		os.Exit(1)
+	}
+
 	miseClient := mise.NewClient()
 
 	// Execute subcommand
