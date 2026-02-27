@@ -402,9 +402,18 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 ### 自动安装行为
 
 如果系统上未安装 mise：
-- 自动安装 mise 到 ~/.local/bin/mise
+- 自动下载 mise 到 ~/.local/bin/mise
 - 需要 curl 或 wget
-- 安装后添加到 PATH
+
+**安装后的手动设置:**
+
+```bash
+# 添加到 PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# 激活 shell
+eval "$(mise activate bash)"
+```
 
 ---
 

@@ -357,9 +357,18 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 ### mise未安装時の動作
 
 miseがシステムにインストールされていない場合：
-- 自動インストールを実行（~/.local/bin/mise）
+- ~/.local/bin/mise に自動ダウンロード
 - curlまたはwgetが必要
-- インストール後はPATHに追加して続行
+
+**インストール後の手動設定:**
+
+```bash
+# PATHに追加
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# shell有効化
+eval "$(mise activate bash)"
+```
 
 ---
 

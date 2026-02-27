@@ -402,9 +402,18 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 ### Auto-install behavior
 
 If mise is not installed on the system:
-- Automatically installs mise to ~/.local/bin/mise
+- Automatically downloads mise to ~/.local/bin/mise
 - Requires curl or wget
-- Adds to PATH after installation
+
+**Manual setup after installation:**
+
+```bash
+# Add to PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# Activate shell
+eval "$(mise activate bash)"
+```
 
 ---
 
