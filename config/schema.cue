@@ -1,44 +1,49 @@
 package miseseq
 
-// Non-empty string constraint
-#NonEmptyString: string & !""
+// Version can be string, float, or empty (defaults to latest)
+#Version: string | float | *"" | "latest"
 
 // Hook trigger timing
 #When: "install" | "update" | "always"
 
-// Tool key pattern (tool name)
-#ToolKeyPattern: "^[A-Za-z0-9][A-Za-z0-9._+:/@-]*$"
-
-// Version can be string or float, empty = latest
-#Version: string | float | *"" | "latest"
-
 // Hook definition
-#Hook: close({
-  run:          #NonEmptyString
+#Hook: {
+  run:          string
   when?:        [...#When]
-  description?: #NonEmptyString
-})
+  description?: string
+}
 
 #HookList: [...#Hook]
 
 // Default hooks applied to all tools
-#Defaults: close({
+#Defaults: {
   preinstall?:  #HookList
   postinstall?: #HookList
-})
+}
 
 // Tool configuration
 // All fields are optional - defaults are:
 //   version: "latest"
 //   exe: <tool name>
 //   depends: []
-#ToolConfig: close({
-  version?:     #Version
-  exe?:         #NonEmptyString
-  depends?:     [...#NonEmptyString]
+#ToolConfig: {
+  version?:    #Version
+  exe?:        string
+  depends?:    [...string]
   preinstall?:  #HookList
   postinstall?: #HookList
-})
+}
+
+// NPM settings
+#NPM: {
+  package_manager?: string
+}
+
+// Settings for mise
+#Settings: {
+  npm?:         #NPM
+  experimental?: string
+}
 
 // Main configuration
 #MiseSeqConfig: {
@@ -48,5 +53,6 @@ package miseseq
   tools: {
     [string]: #ToolConfig
   }
-}
+
+  settings?: #Settings
 }
