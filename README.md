@@ -1,8 +1,10 @@
 # mise-seq
 
-A Go library and CLI tool for installing tools via [mise](https://github.com/jdx/mise) with support for preinstall/postinstall hooks.
+[English](./README.md) | [日本語](./README.ja.md) | [中文](./README.zh.md)
 
-This is a Go reimplementation of [mise-seq.sh](https://github.com/mise-seq/mise-seq.sh).
+---
+
+A Go library and CLI for tool installation using mise.
 
 ---
 
@@ -405,6 +407,14 @@ If mise is not installed on the system:
 - Automatically downloads mise to ~/.local/bin/mise
 - Adds to PATH automatically after download
 - mise becomes available for subsequent commands
+
+**After installation, restart your shell or run:**
+
+```bash
+exec $SHELL
+```
+
+Then verify with: `mise --version`
 
 ---
 

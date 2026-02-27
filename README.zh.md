@@ -1,8 +1,10 @@
 # mise-seq
 
-Go 库和 CLI 工具，通过 [mise](https://github.com/jdx/mise) 安装工具，支持 preinstall/postinstall 钩子。
+[English](./README.md) | [日本語](./README.ja.md) | [中文](./README.zh.md)
 
-这是 [mise-seq.sh](https://github.com/mise-seq/mise-seq.sh) 的 Go 实现。
+---
+
+Go 库和 CLI 工具，用于使用 mise 安装工具。
 
 ---
 
@@ -405,6 +407,14 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 - 自动下载 mise 到 ~/.local/bin/mise
 - 下载后自动添加到 PATH
 - 后续命令可使用 mise
+
+**安装后，重启shell或运行:**
+
+```bash
+exec $SHELL
+```
+
+验证: `mise --version`
 
 ---
 

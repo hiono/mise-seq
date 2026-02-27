@@ -1,6 +1,10 @@
 # mise-seq
 
-miseSEQは、miseを使用したツールインストールをGoライブラリ・CLIとして提供する。
+[English](./README.md) | [日本語](./README.ja.md) | [中文](./README.zh.md)
+
+---
+
+miseを使用したツールインストールをGoライブラリ・CLIとして提供する。
 
 ---
 
@@ -360,6 +364,14 @@ miseがシステムにインストールされていない場合：
 - ~/.local/bin/mise に自動ダウンロード
 - ダウンロード後、自動的にPATHに追加
 - 以降のコマンドでmiseが利用可能
+
+**インストール後、シェルを再起動するか以下を実行:**
+
+```bash
+exec $SHELL
+```
+
+確認: `mise --version`
 
 ---
 
