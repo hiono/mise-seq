@@ -19,10 +19,10 @@ const (
 
 // Runner executes preinstall/postinstall hooks
 type Runner struct {
-	dryRun     bool
-	timeout    time.Duration
-	verbose    bool
-	stateMgr   *StateManager
+	dryRun   bool
+	timeout  time.Duration
+	verbose  bool
+	stateMgr *StateManager
 }
 
 // SetVerbose sets verbose mode
@@ -52,7 +52,7 @@ type HookResult struct {
 // NewRunner creates a new hook runner
 func NewRunner(dryRun bool) *Runner {
 	return &Runner{
-		dryRun:  dryRun,
+		dryRun:   dryRun,
 		timeout:  5 * time.Minute,
 		verbose:  false,
 		stateMgr: NewStateManager(),

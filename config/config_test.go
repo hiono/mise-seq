@@ -19,7 +19,7 @@ func TestConfig_MergeDefaults(t *testing.T) {
 				Version: "1.0.0",
 			},
 			"tool2": {
-				Version:     "2.0.0",
+				Version:    "2.0.0",
 				Preinstall: []Hook{{Run: "echo tool2-preinstall"}},
 			},
 		},
@@ -64,7 +64,7 @@ func TestHasDefaults(t *testing.T) {
 			name: "empty defaults",
 			cfg: &Config{
 				Defaults: &Defaults{
-					Preinstall: nil,
+					Preinstall:  nil,
 					Postinstall: nil,
 				},
 			},

@@ -13,10 +13,10 @@ const (
 
 // Config represents the unified configuration structure
 type Config struct {
-	ToolsOrder []string          `json:"tools_order,omitempty" yaml:"tools_order,omitempty" toml:"tools_order,omitempty"`
-	Tools      map[string]Tool   `json:"tools,omitempty" yaml:"tools,omitempty" toml:"tools,omitempty"`
-	Defaults   *Defaults         `json:"defaults,omitempty" yaml:"defaults,omitempty" toml:"defaults,omitempty"`
-	Settings   *Settings         `json:"settings,omitempty" yaml:"settings,omitempty" toml:"settings,omitempty"`
+	ToolsOrder []string        `json:"tools_order,omitempty" yaml:"tools_order,omitempty" toml:"tools_order,omitempty"`
+	Tools      map[string]Tool `json:"tools,omitempty" yaml:"tools,omitempty" toml:"tools,omitempty"`
+	Defaults   *Defaults       `json:"defaults,omitempty" yaml:"defaults,omitempty" toml:"defaults,omitempty"`
+	Settings   *Settings       `json:"settings,omitempty" yaml:"settings,omitempty" toml:"settings,omitempty"`
 }
 
 // Tool represents a single tool configuration
@@ -30,9 +30,9 @@ type Tool struct {
 
 // Hook represents a preinstall or postinstall hook
 type Hook struct {
-	Run         string   `json:"run,omitempty" yaml:"run,omitempty" toml:"run,omitempty"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
-	When        []When   `json:"when,omitempty" yaml:"when,omitempty" toml:"when,omitempty"`
+	Run         string `json:"run,omitempty" yaml:"run,omitempty" toml:"run,omitempty"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
+	When        []When `json:"when,omitempty" yaml:"when,omitempty" toml:"when,omitempty"`
 }
 
 // Defaults holds default hooks
@@ -43,8 +43,8 @@ type Defaults struct {
 
 // Settings holds mise settings
 type Settings struct {
-	NPM         NPM         `json:"npm,omitempty" yaml:"npm,omitempty" toml:"npm,omitempty"`
-	Experimental string     `json:"experimental,omitempty" yaml:"experimental,omitempty" toml:"experimental,omitempty"`
+	NPM          NPM    `json:"npm,omitempty" yaml:"npm,omitempty" toml:"npm,omitempty"`
+	Experimental string `json:"experimental,omitempty" yaml:"experimental,omitempty" toml:"experimental,omitempty"`
 }
 
 type NPM struct {

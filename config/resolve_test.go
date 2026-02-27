@@ -47,8 +47,8 @@ func TestToolResolver_SimpleDependency(t *testing.T) {
 	tools := map[string]Tool{
 		"nodejs": {Version: "20"},
 		"pnpm": {
-			Version:  "latest",
-			Depends:  []string{"nodejs@20"},
+			Version: "latest",
+			Depends: []string{"nodejs@20"},
 		},
 	}
 
@@ -206,8 +206,8 @@ func TestValidateDependencies(t *testing.T) {
 
 func TestGetToolWithVersion(t *testing.T) {
 	tests := []struct {
-		name    string
-		tool    Tool
+		name     string
+		tool     Tool
 		expected string
 	}{
 		{"jq", Tool{Version: "latest"}, "jq@latest"},

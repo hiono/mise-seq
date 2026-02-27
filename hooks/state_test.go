@@ -33,7 +33,7 @@ func TestStateManager_GetToolStateDir(t *testing.T) {
 
 func TestComputeSHA256(t *testing.T) {
 	tests := []struct {
-		input    string
+		input string
 	}{
 		{"hello"},
 		{""},

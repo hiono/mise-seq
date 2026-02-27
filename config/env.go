@@ -27,13 +27,13 @@ type RuntimeConfig struct {
 	CUEVersion string
 
 	// MiseShimsDefault - path to mise shims
-	 MiseShimsDefault string
+	MiseShimsDefault string
 
 	// MiseDataDir - mise data directory
-	 MiseDataDir string
+	MiseDataDir string
 
 	// MiseShimsCustom - custom shims directory
-	 MiseShimsCustom string
+	MiseShimsCustom string
 }
 
 // LoadRuntimeConfig loads configuration from environment variables
