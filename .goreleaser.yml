@@ -1,14 +1,10 @@
-project_name: mise-seq
-
-archives:
-  - id: mise-seq
-    formats:
-      - tar.gz
-      - zip
+before:
+  hooks:
+    - rm -rf dist/
 
 builds:
-  - id: mise-seq
-    main: ./...
+  - main: ./...
+    id: mise-seq
     goos:
       - linux
       - darwin
@@ -16,22 +12,18 @@ builds:
     goarch:
       - amd64
       - arm64
-    ldflags:
-      - -s -w
+
+archives:
+  - id: mise-seq
+    builds:
+      - mise-seq
+    format: tar.gz
+    files:
+      - LICENSE
+      - README.md
 
 checksum:
   name_template: 'checksums.txt'
-
-snapshot:
-  name_template: "{{ .Tag }}-next"
-
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
 
 release:
   github:
