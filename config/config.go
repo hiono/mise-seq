@@ -25,6 +25,7 @@ type Tool struct {
 	Exe         string   `json:"exe,omitempty" yaml:"exe,omitempty" toml:"exe,omitempty"`
 	Preinstall  []Hook   `json:"preinstall,omitempty" yaml:"preinstall,omitempty" toml:"preinstall,omitempty"`
 	Postinstall []Hook   `json:"postinstall,omitempty" yaml:"postinstall,omitempty" toml:"postinstall,omitempty"`
+	Depends     []string `json:"depends,omitempty" yaml:"depends,omitempty" toml:"depends,omitempty"`
 }
 
 // Hook represents a preinstall or postinstall hook
@@ -111,6 +112,11 @@ func ValidateConfig(cfg *Config) error {
 				return fmt.Errorf("tool_order contains '%s' which is not in tools", name)
 			}
 		}
+	}
+
+	// Validate dependencies
+	if err := ValidateDependencies(cfg); err != nil {
+		return err
 	}
 
 	return nil

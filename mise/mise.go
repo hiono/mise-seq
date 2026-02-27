@@ -298,23 +298,29 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	return nil
 }
 
-// InstallAllWithHooks installs all tools from config with hooks, respecting tools_order
+// InstallAllWithHooks installs all tools from config with hooks, respecting tools_order and dependencies
 func (c *Client) InstallAllWithHooks(ctx context.Context, cfg *config.Config) error {
 	toolOrder := config.GetToolOrder(cfg)
 	tools := config.GetTools(cfg)
 
-	if len(toolOrder) == 0 {
-		// No order specified, use tools map keys
-		for name := range tools {
-			if err := c.InstallWithHooks(ctx, cfg, name); err != nil {
-				return err
-			}
+	// Determine installation order
+	var installOrder []string
+
+	if len(toolOrder) > 0 {
+		// Use tools_order if specified
+		installOrder = toolOrder
+	} else {
+		// Use dependency resolver
+		resolver := config.NewToolResolver(tools)
+		var err error
+		installOrder, err = resolver.ResolveOrder()
+		if err != nil {
+			return fmt.Errorf("failed to resolve dependency order: %w", err)
 		}
-		return nil
 	}
 
-	// Install in specified order
-	for _, name := range toolOrder {
+	// Install in determined order
+	for _, name := range installOrder {
 		if err := c.InstallWithHooks(ctx, cfg, name); err != nil {
 			return err
 		}
