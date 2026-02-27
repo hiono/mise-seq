@@ -270,7 +270,7 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	// Run preinstall hooks
 	if tool.Preinstall != nil {
 		scripts := hooks.ParseHooksFromConfig(tool.Preinstall)
-		_, err := hookRunner.RunHooks(ctx, scripts)
+		_, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePreinstall, scripts)
 		if err != nil {
 			return fmt.Errorf("preinstall hook failed for %s: %w", toolName, err)
 		}
@@ -289,7 +289,7 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	// Run postinstall hooks
 	if tool.Postinstall != nil {
 		scripts := hooks.ParseHooksFromConfig(tool.Postinstall)
-		_, err := hookRunner.RunHooks(ctx, scripts)
+		_, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePostinstall, scripts)
 		if err != nil {
 			return fmt.Errorf("postinstall hook failed for %s: %w", toolName, err)
 		}

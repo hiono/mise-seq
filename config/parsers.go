@@ -57,11 +57,8 @@ func ParseTOML(path string) (*Config, error) {
 }
 
 // ParseCUE parses a CUE config file
-// Note: CUE parsing requires full cue build - simplified for now
 func ParseCUE(path string) (*Config, error) {
-	// TODO: Implement CUE parsing with full cuelang.org/go dependency
-	// For now, return unsupported error
-	return nil, fmt.Errorf("CUE parsing not yet implemented - requires full CUE SDK")
+	return parseCUEFile(path)
 }
 
 // DetectFormat detects the config format from file extension
