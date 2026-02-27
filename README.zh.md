@@ -1,62 +1,170 @@
 # mise-seq
 
-mise-seq 是运行在 system-installed `mise` 之上的
-顺序安装工具。
+Go 库和 CLI 工具，通过 [mise](https://github.com/jdx/mise) 安装工具，支持 preinstall/postinstall 钩子。
 
-该工具使用用户定义的配置文件（`tools.yaml`），
-以顺序方式逐个安装开发工具。
+这是 [mise-seq.sh](https://github.com/mise-seq/mise-seq.sh) 的 Go 实现。
+
+---
+
+## 功能
+
+- **多格式配置支持**: JSON、YAML、TOML、CUE
+- **统一 Loader API**: 自动检测格式并解析
+- **mise CLI 包装器**: 安装、升级、列出、状态检查
+- **钩子支持**: 安装前后执行钩子
+- **SHA256 状态管理**: 跳过未更改的钩子（支持强制选项）
+- **顺序安装**: 尊重 `tools_order` 的安装顺序
+- **Defaults**: 为所有工具应用默认钩子
+- **Settings**: 应用 mise 设置 (npm, experimental)
+- **CLI 子命令**: install、upgrade、list、status
+
+---
+
+## 安装
+
+### 二进制
+
+从 [Releases](https://github.com/mise-seq/config-loader/releases) 下载
+
+### 源码
+
+```bash
+go install github.com/mise-seq/config-loader@latest
+```
+
+### 库
+
+```bash
+go get github.com/mise-seq/config-loader
+```
 
 ---
 
 ## 快速开始
 
-### 使用本地 `tools.yaml`
+### CLI
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+```bash
+# 从配置安装工具
+mise-seq -c tools.yaml
+
+# 试运行
+mise-seq -c tools.yaml --dry-run
+
+# 升级已安装的工具
+mise-seq upgrade -c tools.yaml
+
+# 列出已安装的工具
+mise-seq list
+
+# 显示状态
+mise-seq status -c tools.yaml
 ```
 
-### 使用远程 `tools.yaml`
+### 库
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s https://example.com/tools.yaml
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/mise-seq/config-loader/config"
+	"github.com/mise-seq/config-loader/mise"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// 加载配置
+	loader := config.NewLoader()
+	cfg, err := loader.Parse("tools.yaml")
+	if err != nil {
+		log.Fatalf("加载配置失败: %v", err)
+	}
+
+	// 带钩子安装工具
+	client := mise.NewClient()
+	if err := client.InstallAllWithHooks(ctx, cfg); err != nil {
+		log.Fatalf("安装失败: %v", err)
+	}
+}
 ```
-
-- `tools.yaml` 由用户提供
-- 仓库中包含的示例配置仅用于参考
 
 ---
 
-## 背景
+## 配置格式
 
-尽管 `mise` 支持并行安装多个工具，
-但在存在隐式依赖或初始化顺序要求时，
-并行安装可能导致失败。
-
-mise-seq 通过以下方式避免这些问题：
-
-- 按顺序安装工具
-- 遵循显式顺序（`tools_order`）
-- 在安装前后执行钩子
-
----
-
-## 配置
-
-### 基本工具定义
+### YAML
 
 ```yaml
 tools:
   jq:
     version: latest
-```
+  lazygit:
+    version: latest
 
-### 安装顺序（可选）
-
-```yaml
 tools_order:
   - jq
   - lazygit
+
+defaults:
+  preinstall:
+    - run: echo "Installing {{.ToolName}}..."
+  postinstall:
+    - run: echo "Installed {{.ToolName}}"
+
+settings:
+  npm:
+    package_manager: pnpm
+  experimental: true
+```
+
+### JSON
+
+```json
+{
+  "tools": {
+    "jq": { "version": "latest" },
+    "lazygit": { "version": "latest" }
+  },
+  "tools_order": ["jq", "lazygit"],
+  "defaults": {
+    "preinstall": [{ "run": "echo Installing..." }]
+  }
+}
+```
+
+### TOML
+
+```toml
+[tools.jq]
+version = "latest"
+
+[tools.lazygit]
+version = "latest"
+
+tools_order = ["jq", "lazygit"]
+
+[defaults.preinstall]
+run = "echo Installing..."
+
+[settings.npm]
+package_manager = "pnpm"
+```
+
+### CUE
+
+```cue
+MiseSeqConfig: {
+    tools: {
+        jq: version: "latest"
+        lazygit: version: "latest"
+    }
+    tools_order: ["jq", "lazygit"]
+    defaults: preinstall: [{run: "echo Installing..."}]
+}
 ```
 
 ---
@@ -65,121 +173,182 @@ tools_order:
 
 支持以下钩子类型：
 
-- `preinstall`
-- `postinstall`
+- `preinstall`: 安装前运行
+- `postinstall`: 安装后运行
 
-以下为示例及实际使用方法。
+### 钩子时机
 
-### 版本确认
+钩子可配置为在特定事件时运行：
 
-```yaml
-tools:
-  jq:
-    version: latest
-    postinstall:
-      - when: [install, update]
-        run: |
-          set -eu
-          jq --version
-```
+- `install`: 仅首次安装时
+- `update`: 仅版本升级时
+- `always`: 始终运行
 
-### 初始化配置目录
+### 钩子示例
 
 ```yaml
 tools:
   lazygit:
     version: latest
+    preinstall:
+      - run: |
+          echo "Installing lazygit..."
+        when: ["install"]
     postinstall:
-      - when: [install]
-        run: |
-          set -eu
+      - run: |
           mkdir -p "$HOME/.config/lazygit"
+        when: ["always"]
 ```
 
-### 生成配置模板（不覆盖已存在的文件）
+### Defaults
+
+为所有工具应用钩子：
 
 ```yaml
-tools:
-  rg:
-    version: latest
-    postinstall:
-      - when: [install]
-        run: |
-          set -eu
-          cfg="$HOME/.config/ripgrep/config"
-          if [ ! -f "$cfg" ]; then
-            mkdir -p "$(dirname "$cfg")"
-            cat >"$cfg" <<'EOF'
---smart-case
---hidden
-EOF
-          fi
+defaults:
+  preinstall:
+    - run: echo "Installing {{.ToolName}}"
+  postinstall:
+    - run: echo "Done installing {{.ToolName}}"
 ```
 
-### 执行规则
+### 状态管理
 
-- 钩子使用 POSIX `sh` 执行
-- 支持 `$HOME`、`${VAR}` 等标准环境变量
-- 不支持 mise 模板语法（`{{env.HOME}}`）
-- 钩子脚本内容不由 CUE 验证
+钩子使用 SHA256 标记跳过未更改的钩子：
+
+- 首次运行：执行钩子，保存 SHA256
+- 后续运行：比较 SHA256，一致则跳过
+- `--force-hooks`: 强制执行即使未更改
+- `--postinstall-on-update`: 版本变更时运行 postinstall
 
 ---
 
-## 验证
+## CLI 参考
 
-mise-seq 在执行前执行以下验证：
+### 命令
 
-1. YAML 语法验证
-2. 使用 CUE 进行模式验证
+| 命令     | 描述                   |
+|---------|----------------------|
+| `install` | 安装所有工具（默认）   |
+| `upgrade` | 升级已安装的工具       |
+| `list`    | 列出已安装的工具       |
+| `status`  | 显示配置工具的状态     |
 
-```sh
-yq -e '.' tools.yaml
-cue vet -c=false .tools/schema/mise-seq.cue tools.yaml -d '#MiseSeqConfig'
-```
+### 全局标志
 
----
+| 标志                      | 描述                     |
+|--------------------------|------------------------|
+| `-c <file>`              | 配置文件（默认: tools.yaml） |
+| `--dry-run`              | 试运行模式               |
+| `--force-hooks`          | 强制执行钩子             |
+| `--postinstall-on-update`| 更新时运行 postinstall   |
+| `-v`                     | 详细输出                 |
+| `--version`              | 显示版本                 |
+| `--help`                 | 显示帮助                 |
 
-## 示例配置
+### 环境变量
 
-仓库中包含 `.tools/tools.yaml` 和 `.tools/tools.toml` 作为示例配置。
-
-- 非必需
-- 无特殊行为
-- 包含注释以展示钩子结构
-- 仅用于参考和发布前验证
-
-主要输入始终是用户提供的 `tools.yaml`。
-
----
-
-## 安装（已验证，可选）
-
-为增强安全性，可使用 GitHub 官方的 SHA256 digest 验证发布资产：
-
-```sh
-# 查看发布资产的 SHA256 digest
-gh release view v0.1.0 --repo=hiono/mise-seq --json=assets
-
-# 下载并验证 zip（如需要）
-curl -fsSL https://github.com/hiono/mise-seq/releases/download/v0.1.0/mise-seq-release.zip -o mise-seq-release.zip
-```
+| 变量                       | 描述                  |
+|---------------------------|---------------------|
+| `DRY_RUN`                 | 启用试运行            |
+| `DEBUG`                  | 启用调试输出          |
+| `FORCE_HOOKS`           | 强制执行钩子          |
+| `RUN_POSTINSTALL_ON_UPDATE`| 更新时运行 postinstall |
+| `STATE_DIR`               | 自定义状态目录        |
+| `CUE_VERSION`           | CUE 版本             |
+| `MISE_SHIMS_DEFAULT`    | Mise shims 路径      |
+| `MISE_DATA_DIR`          | Mise 数据目录        |
 
 ---
 
-## 安装（简易）
+## API 参考
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/hiono/mise-seq/v0.1.0/install.sh | sh -s ./tools.yaml
+### config 包
+
+```go
+// 创建新加载器
+loader := config.NewLoader()
+
+// 解析配置文件（自动检测）
+cfg, err := loader.Parse("tools.yaml")
+
+// 获取工具列表
+tools := config.GetTools(cfg)
+
+// 获取安装顺序
+order := config.GetToolOrder(cfg)
+
+// 检查是否有默认值
+hasDefaults := config.HasDefaults(cfg)
+
+// 获取默认钩子
+preinstall, postinstall := config.GetDefaultsHooks(cfg)
 ```
 
-此方式不会验证 `install.sh` 本身的完整性。
+### mise 包
+
+```go
+client := mise.NewClient()
+
+// 安装单个工具
+result, err := client.InstallWithOutput(ctx, "jq@latest")
+
+// 检查工具是否已安装
+installed, err := client.IsInstalled(ctx, "jq")
+
+// 未安装时安装
+installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
+
+// 升级工具
+result, err := client.UpgradeWithOutput(ctx, "jq")
+
+// 已安装则升级
+result, err := client.UpgradeIfInstalled(ctx, "jq")
+
+// 列出已安装的工具
+tools, err := client.ListTools(ctx)
+
+// 带钩子安装（尊重 tools_order）
+err := client.InstallAllWithHooks(ctx, cfg)
+
+// 应用设置
+err := client.ApplySettings(ctx, cfg.Settings)
+
+// Bootstrap: 确保 mise/cue 可用
+bootstrapper := mise.NewBootstrapper()
+err := bootstrapper.EnsureMise(ctx)
+err := bootstrapper.EnsureCue(ctx)
+```
+
+### hooks 包
+
+```go
+runner := hooks.NewRunner(false)
+
+// 带状态管理运行钩子
+result, err := runner.Run(ctx, "toolname", hooks.HookTypePreinstall, "echo hello")
+
+// 运行多个钩子
+results, err := runner.RunHooks(ctx, "toolname", hooks.HookTypePreinstall, []string{
+    "echo first",
+    "echo second",
+})
+
+// 运行默认钩子
+results, err := runner.RunDefaultsHook(ctx, hooks.HookTypePreinstall, []string{
+    "echo default hook",
+})
+
+// 带自定义选项创建运行器
+runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
+```
 
 ---
 
 ## 前置条件
 
-- 系统中必须已安装 `mise`
-- 工具按用户范围进行管理
+- Go 1.21+
+- [mise](https://github.com/jdx/mise) CLI 已系统级安装
 
 ---
 
