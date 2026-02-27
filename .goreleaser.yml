@@ -1,10 +1,12 @@
+project_name: mise-seq
+
 before:
   hooks:
     - rm -rf dist/
 
 builds:
-  - main: ./...
-    id: mise-seq
+  - id: mise-seq
+    dir: .
     goos:
       - linux
       - darwin
