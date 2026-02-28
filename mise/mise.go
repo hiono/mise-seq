@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -46,6 +47,10 @@ func (c *Client) InstallWithOutput(ctx context.Context, tool string) (*Result, e
 	}
 
 	cmd := exec.CommandContext(ctx, "mise", "install", tool)
+	cmd.Env = append(os.Environ(),
+		"GITHUB_TOKEN="+os.Getenv("GH_TOKEN"),
+		"GITLAB_TOKEN="+os.Getenv("GITLAB_TOKEN"),
+	)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 
@@ -109,6 +114,45 @@ func (c *Client) InstallIfNotInstalled(ctx context.Context, tool string) (bool, 
 
 	result, err := c.InstallWithOutput(ctx, tool)
 	return true, result, err
+}
+
+// SetGlobal sets a tool as global default (mise use -g)
+func (c *Client) SetGlobal(ctx context.Context, tool string) error {
+	if c.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
+	cmd := exec.CommandContext(ctx, "mise", "use", "-g", tool)
+	cmd.Env = append(os.Environ(),
+		"GITHUB_TOKEN="+os.Getenv("GH_TOKEN"),
+		"GITLAB_TOKEN="+os.Getenv("GITLAB_TOKEN"),
+	)
+
+	stdout := new(strings.Builder)
+	stderr := new(strings.Builder)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("mise use -g failed: %s", stderr.String())
+	}
+	return nil
+}
+
+// IsManagedByMise checks if a tool is already managed by mise (shim exists)
+func (c *Client) IsManagedByMise(ctx context.Context, tool string) bool {
+	if c.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
+	cmd := exec.CommandContext(ctx, "mise", "which", tool)
+	err := cmd.Run()
+	return err == nil
 }
 
 // UpgradeWithOutput upgrades a tool and captures output
@@ -268,21 +312,26 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	}
 
 	// Run preinstall hooks
-	if tool.Preinstall != nil {
-		scripts := hooks.ParseHooksFromConfig(tool.Preinstall)
-		_, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePreinstall, scripts)
+	if len(tool.Preinstall) > 0 {
+		scripts := ExtractHookScripts(tool.Preinstall)
+		results, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePreinstall, scripts)
 		if err != nil {
-			return fmt.Errorf("preinstall hook failed for %s: %w", toolName, err)
+			// Output all hook output on error
+			for _, result := range results {
+				fmt.Print(result.Stdout)
+				fmt.Fprint(os.Stderr, result.Stderr)
+			}
+			desc := ""
+			if len(tool.Preinstall) > 0 && tool.Preinstall[0].Description != "" {
+				desc = fmt.Sprintf(" (%s)", tool.Preinstall[0].Description)
+			}
+			return fmt.Errorf("preinstall hook%s failed for %s: %w", desc, toolName, err)
 		}
 	}
 
 	// Install tool
-	// Use exe if specified, otherwise use toolName
-	exeName := tool.Exe
-	if exeName == "" {
-		exeName = toolName
-	}
-	toolSpec := fmt.Sprintf("%s@%s", exeName, tool.Version)
+	// Use toolName (full spec) for mise install, exeName is for reference only
+	toolSpec := fmt.Sprintf("%s@%s", toolName, tool.Version)
 	_, result, err := c.InstallIfNotInstalled(ctx, toolSpec)
 	if err != nil {
 		return fmt.Errorf("install failed for %s: %w", toolName, err)
@@ -291,12 +340,26 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 		return fmt.Errorf("install error for %s: %w", toolName, result.Error)
 	}
 
+	// Set as global default (equivalent to mise use -g)
+	if err := c.SetGlobal(ctx, toolSpec); err != nil {
+		return fmt.Errorf("failed to set global default for %s: %w", toolName, err)
+	}
+
 	// Run postinstall hooks
-	if tool.Postinstall != nil {
-		scripts := hooks.ParseHooksFromConfig(tool.Postinstall)
-		_, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePostinstall, scripts)
+	if len(tool.Postinstall) > 0 {
+		scripts := ExtractHookScripts(tool.Postinstall)
+		results, err := hookRunner.RunHooks(ctx, toolName, hooks.HookTypePostinstall, scripts)
 		if err != nil {
-			return fmt.Errorf("postinstall hook failed for %s: %w", toolName, err)
+			// Output all hook output on error
+			for _, result := range results {
+				fmt.Print(result.Stdout)
+				fmt.Fprint(os.Stderr, result.Stderr)
+			}
+			desc := ""
+			if len(tool.Postinstall) > 0 && tool.Postinstall[0].Description != "" {
+				desc = fmt.Sprintf(" (%s)", tool.Postinstall[0].Description)
+			}
+			return fmt.Errorf("postinstall hook%s failed for %s: %w", desc, toolName, err)
 		}
 	}
 
@@ -304,7 +367,7 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 }
 
 // InstallAllWithHooks installs all tools from config with hooks, respecting tools_order and dependencies
-func (c *Client) InstallAllWithHooks(ctx context.Context, cfg *config.Config) error {
+func (c *Client) InstallAllWithHooks(ctx context.Context, cfg *config.Config, runPostinstallOnUpdate bool) error {
 	toolOrder := config.GetToolOrder(cfg)
 	tools := config.GetTools(cfg)
 
@@ -326,8 +389,40 @@ func (c *Client) InstallAllWithHooks(ctx context.Context, cfg *config.Config) er
 
 	// Install in determined order
 	for _, name := range installOrder {
-		if err := c.InstallWithHooks(ctx, cfg, name); err != nil {
-			return err
+		toolSpec := fmt.Sprintf("%s@%s", name, tools[name].Version)
+
+		// Check if already managed by mise
+		if c.IsManagedByMise(ctx, name) {
+			// Tool is already managed - run update flow
+			fmt.Printf("Managed by mise: %s -> mise upgrade %s\n", name, toolSpec)
+			_, err := c.UpgradeWithOutput(ctx, name)
+			if err != nil {
+				return fmt.Errorf("failed to upgrade %s: %w", name, err)
+			}
+
+			// Run postinstall hooks (update phase)
+			if runPostinstallOnUpdate && len(tools[name].Postinstall) > 0 {
+				hookRunner := hooks.NewRunner(false)
+				scripts := ExtractHookScripts(tools[name].Postinstall)
+				results, err := hookRunner.RunHooks(ctx, name, hooks.HookTypePostinstall, scripts)
+				if err != nil {
+					for _, result := range results {
+						fmt.Print(result.Stdout)
+						fmt.Fprint(os.Stderr, result.Stderr)
+					}
+					desc := ""
+					if len(tools[name].Postinstall) > 0 && tools[name].Postinstall[0].Description != "" {
+						desc = fmt.Sprintf(" (%s)", tools[name].Postinstall[0].Description)
+					}
+					return fmt.Errorf("postinstall hook%s failed for %s: %w", desc, name, err)
+				}
+			}
+		} else {
+			// Tool is not managed - run install flow
+			fmt.Printf("NOT managed by mise: %s -> mise use -g %s\n", name, toolSpec)
+			if err := c.InstallWithHooks(ctx, cfg, name); err != nil {
+				return err
+			}
 		}
 	}
 

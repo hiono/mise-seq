@@ -174,7 +174,7 @@ func runInstall(ctx context.Context, cfg *config.Config, client *mise.Client, ru
 	if verbose {
 		config.Info("Installing tools...")
 	}
-	if err := client.InstallAllWithHooks(ctx, cfg); err != nil {
+	if err := client.InstallAllWithHooks(ctx, cfg, runtimeCfg.RunPostinstallOnUpdate); err != nil {
 		return fmt.Errorf("installation failed: %w", err)
 	}
 
