@@ -319,15 +319,39 @@ preinstall, postinstall := config.GetDefaultsHooks(cfg)
 ```go
 client := mise.NewClient()
 
+// 単一ツールをインストール
 result, err := client.InstallWithOutput(ctx, "jq@latest")
+
+// ツールがインストール済みか確認
 installed, err := client.IsInstalled(ctx, "jq")
+
+// ツールがmiseで管理されているか確認
+managed, err := client.IsManagedByMise(ctx, "jq")
+
+// 未インストールの場合のみインストール
 installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
+
+// グローバルデフォルトを設定（mise use -g相当）
+err := client.SetGlobal(ctx, "jq@latest")
+
+// ツールをアップグレード
 result, err := client.UpgradeWithOutput(ctx, "jq")
+
+// インストール済みならアップグレード
 result, err := client.UpgradeIfInstalled(ctx, "jq")
+
+// インストール済みツールを一覧表示
 tools, err := client.ListTools(ctx)
-err := client.InstallAllWithHooks(ctx, cfg)
+
+// フック付きでインストール（tools_orderに従う、自动的にinstall/upgradeを判定）
+err := client.InstallAllWithHooks(ctx, cfg, runPostinstallOnUpdate)
+
+// InstallAllWithHooks: runPostinstallOnUpdate=trueでupgrade時にpostinstallを実行
+
+// 設定を適用
 err := client.ApplySettings(ctx, cfg.Settings)
 
+// ブートストラップ: mise/cueの確保
 bootstrapper := mise.NewBootstrapper()
 err := bootstrapper.EnsureMise(ctx)
 err := bootstrapper.EnsureCue(ctx)

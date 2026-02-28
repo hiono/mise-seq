@@ -348,8 +348,14 @@ result, err := client.InstallWithOutput(ctx, "jq@latest")
 // Check if tool is installed
 installed, err := client.IsInstalled(ctx, "jq")
 
+// Check if tool is managed by mise (in config)
+managed, err := client.IsManagedByMise(ctx, "jq")
+
 // Install if not already installed
 installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
+
+// Set global default (equivalent to mise use -g)
+err := client.SetGlobal(ctx, "jq@latest")
 
 // Upgrade a tool
 result, err := client.UpgradeWithOutput(ctx, "jq")
@@ -360,8 +366,10 @@ result, err := client.UpgradeIfInstalled(ctx, "jq")
 // List installed tools
 tools, err := client.ListTools(ctx)
 
-// Install with hooks (respects tools_order)
-err := client.InstallAllWithHooks(ctx, cfg)
+// Install with hooks (respects tools_order, auto-detects install vs upgrade)
+err := client.InstallAllWithHooks(ctx, cfg, runPostinstallOnUpdate)
+
+// InstallAllWithHooks: runPostinstallOnUpdate=true runs postinstall hooks on upgrade
 
 // Apply settings
 err := client.ApplySettings(ctx, cfg.Settings)

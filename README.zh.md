@@ -348,8 +348,14 @@ result, err := client.InstallWithOutput(ctx, "jq@latest")
 // 检查工具是否已安装
 installed, err := client.IsInstalled(ctx, "jq")
 
+// 检查工具是否由 mise 管理
+managed, err := client.IsManagedByMise(ctx, "jq")
+
 // 未安装时安装
 installed, result, err := client.InstallIfNotInstalled(ctx, "jq@latest")
+
+// 设置全局默认（等同于 mise use -g）
+err := client.SetGlobal(ctx, "jq@latest")
 
 // 升级工具
 result, err := client.UpgradeWithOutput(ctx, "jq")
@@ -360,8 +366,10 @@ result, err := client.UpgradeIfInstalled(ctx, "jq")
 // 列出已安装的工具
 tools, err := client.ListTools(ctx)
 
-// 带钩子安装（尊重 tools_order）
-err := client.InstallAllWithHooks(ctx, cfg)
+// 带钩子安装（尊重 tools_order，自动检测 install vs upgrade）
+err := client.InstallAllWithHooks(ctx, cfg, runPostinstallOnUpdate)
+
+// InstallAllWithHooks: runPostinstallOnUpdate=true 在升级时运行 postinstall
 
 // 应用设置
 err := client.ApplySettings(ctx, cfg.Settings)
