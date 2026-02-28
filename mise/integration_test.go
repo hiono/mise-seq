@@ -3,6 +3,7 @@ package mise
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,11 @@ import (
 func TestInstallWithIsolation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
 	}
 
 	tests := []struct {
@@ -116,6 +122,11 @@ func TestUpgradeWithIsolation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
+	}
+
 	ctx := context.Background()
 
 	testDir := filepath.Join(os.TempDir(), "mise-test-upgrade-"+t.Name())
@@ -165,6 +176,11 @@ func TestIsManagedByMiseIsolation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
+	}
+
 	ctx := context.Background()
 
 	testDir := filepath.Join(os.TempDir(), "mise-test-ismanaged-"+t.Name())
@@ -212,6 +228,11 @@ func TestIsManagedByMiseIsolation(t *testing.T) {
 func TestPreinstallHookExecution(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
 	}
 
 	ctx := context.Background()
@@ -276,6 +297,11 @@ func TestPostinstallHookExecution(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
+	}
+
 	ctx := context.Background()
 
 	testDir := filepath.Join(os.TempDir(), "mise-test-postinstall-"+t.Name())
@@ -331,6 +357,11 @@ func TestPostinstallHookExecution(t *testing.T) {
 func TestMiseEnvironmentVariables(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Check if mise is available
+	if _, err := exec.LookPath("mise"); err != nil {
+		t.Skip("mise not available in PATH")
 	}
 
 	env := getMiseEnv()

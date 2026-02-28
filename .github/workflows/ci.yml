@@ -56,7 +56,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v1.64
 
       - name: Run gofmt
         run: |
@@ -72,6 +72,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run govulncheck
-        uses: golang/vuln-action@v2
+        uses: golang/vuln-action@v3
         with:
           module-path: ./...
