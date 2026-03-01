@@ -14,9 +14,11 @@ Go 库和 CLI 工具，用于使用 mise 安装工具。
 - 统一 Loader API: 自动检测格式
 - mise CLI 包装器: 安装、升级、列出、状态检查
 - 插件支持: 安装前自动添加 mise 插件
+- 包格式: runtime:tool (npm:difit, go:github.com/...)
+- 有序列表: 列表顺序 = 安装顺序
+- 禁用工具: disabled: true 跳过安装
 - 钩子支持: 安装前后执行钩子
 - SHA256 状态管理: 跳过未更改的钩子
-- 顺序安装: 尊重 tools_order
 - Defaults: 为所有工具应用钩子
 - Settings: 配置 mise (npm, experimental)
 - CLI 子命令: install、upgrade、list、status
@@ -103,18 +105,18 @@ func main() {
 
 ```yaml
 tools:
-  jq:
+  - name: jq
     version: latest
-  lazygit:
+  - name: lazygit
     version: latest
-  glab:
+  - name: glab
     version: latest
     plugin: glab
-
-tools_order:
-  - jq
-  - lazygit
-  - glab
+  - name: difit
+    package: npm:difit
+  - name: gemini
+    package: npm:@google/gemini-cli
+    disabled: true
 
 defaults:
   preinstall:
@@ -125,6 +127,8 @@ defaults:
 settings:
   npm:
     package_manager: pnpm
+  experimental: true
+```
   experimental: true
 ```
 
@@ -176,22 +180,32 @@ MiseSeqConfig: {
 
 ### 配置参考
 
-所有字段都是**可选的**（未指定时使用默认值）。
+所有字段都是可选的。
 
 #### 工具字段
 
 | 字段 | 类型 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `version` | string | 否 | `"latest"` | 工具版本（如 `"1.22"`, `"latest"`, `""`） |
-| `plugin` | string | 否 | - | 安装前要添加的mise插件（如 `"glab"`） |
-| `exe` | string | 否 | `<工具名>` | 可执行文件名（与工具键名不同时） |
-| `depends` | array | 否 | `[]` | 依赖: `["tool@version"]` 或 `["tool"]`（= latest） |
-| `preinstall` | array | 否 | `[]` | 安装前运行的钩子 |
-| `postinstall` | array | 否 | `[]` | 安装后运行的钩子 |
+|------|------|--------|------|
+| name | string | 必需 | 工具名称 |
+| version | string | "latest" | 工具版本 |
+| package | string | - | runtime:tool格式 (例: npm:difit) |
+| plugin | string | - | 安装前要添加的mise插件 |
+| exe | string | name | 可执行文件名 |
+| disabled | bool | false | 跳过安装 |
+| depends | array | [] | 依赖（仅工具名） |
+| preinstall | array | [] | 安装前运行的钩子 |
+| postinstall | array | [] | 安装后运行的钩子 |
 
 #### 依赖语法
 
 ```yaml
+tools:
+  - name: rust
+    version: 1.88
+    depends:
+      - gcc
+      - cargo
+```
 # 完整语法
 tools:
   rust:

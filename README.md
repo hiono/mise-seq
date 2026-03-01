@@ -14,9 +14,11 @@ A Go library and CLI for tool installation using mise.
 - Unified Loader API: auto-detects format
 - mise CLI wrapper: install, upgrade, list, status tools
 - Plugin support: adds mise plugins before installation
+- Package format: runtime:tool (npm:difit, go:github.com/...)
+- Ordered list: list order = installation order
+- Disable tools: skip installation with disabled: true
 - Hook support: runs scripts before/after installation
 - SHA256 state management: skips unchanged hooks
-- Ordered installation: respects tools_order
 - Defaults: applies hooks to all tools
 - Settings: configures mise (npm, experimental)
 - CLI subcommands: install, upgrade, list, status
@@ -103,18 +105,18 @@ func main() {
 
 ```yaml
 tools:
-  jq:
+  - name: jq
     version: latest
-  lazygit:
+  - name: lazygit
     version: latest
-  glab:
+  - name: glab
     version: latest
     plugin: glab  # Add mise plugin before installation
-
-tools_order:
-  - jq
-  - lazygit
-  - glab
+  - name: difit
+    package: npm:difit  # runtime:tool format
+  - name: gemini
+    package: npm:@google/gemini-cli
+    disabled: true  # Skip installation
 
 defaults:
   preinstall:
@@ -182,26 +184,26 @@ All fields are optional unless marked as required.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `version` | string | No | `"latest"` | Tool version (e.g., `"1.22"`, `"latest"`, `""`) |
-| `plugin` | string | No | - | mise plugin to add before installation (e.g., `"glab"` for GitLab CLI) |
-| `exe` | string | No | `<tool name>` | Executable name (if different from tool key) |
-| `depends` | array | No | `[]` | Dependencies: `["tool@version"]` or `["tool"]` (= latest) |
+| `name` | string | Yes | - | Tool name (required) |
+| `version` | string | No | `"latest"` | Tool version |
+| `package` | string | No | - | runtime:tool format (e.g., `npm:difit`, `go:github.com/user/repo`) |
+| `plugin` | string | No | - | mise plugin to add before installation |
+| `exe` | string | No | `<name>` | Executable name |
+| `disabled` | bool | No | `false` | Skip installation if true |
+| `depends` | array | No | `[]` | Dependencies (tool names only) |
 | `preinstall` | array | No | `[]` | Hooks to run before installation |
 | `postinstall` | array | No | `[]` | Hooks to run after installation |
 
 #### Dependency Syntax
 
 ```yaml
-# Full syntax
 tools:
-  rust:
+  - name: rust
     version: 1.88
     depends:
-      - gcc@latest    # explicit @version
-      - cargo@latest  # explicit @latest
-
-# Shorthand (recommended)
-tools:
+      - gcc
+      - cargo
+```
   rust:
     version: 1.88
     depends:

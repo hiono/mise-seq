@@ -14,9 +14,11 @@ miseを使用したツールインストールをGoライブラリ・CLIとし�
 - 統一Loader API: フォーマット自動検出
 - mise CLIラッパー: インストール、アップグレード、リスト、ステータス
 - プラグイン対応: インストール前にmiseプラグインを自動追加
+- パッケージ形式: runtime:tool (npm:difit, go:github.com/...)
+- 順序付きリスト: リスト順=インストール順
+- ツール無効化: disabled: trueでインストールをスキップ
 - フック対応: インストール前後にスクリプト実行
 - SHA256ステート管理: 未変更のフックをスキップ
-- 順序付きインストール: tools_orderに従う
 - デフォルトフック: 全ツールに適用
 - mise設定: npm、experimental対応
 - CLIサブコマンド: install、upgrade、list、status
@@ -101,18 +103,18 @@ func main() {
 
 ```yaml
 tools:
-  jq:
+  - name: jq
     version: latest
-  lazygit:
+  - name: lazygit
     version: latest
-  glab:
+  - name: glab
     version: latest
     plugin: glab  # インストール前にmiseプラグインを追加
-
-tools_order:
-  - jq
-  - lazygit
-  - glab
+  - name: difit
+    package: npm:difit  # runtime:tool形式
+  - name: gemini
+    package: npm:@google/gemini-cli
+    disabled: true  # インストールをスキップ
 
 defaults:
   preinstall:
@@ -182,16 +184,26 @@ MiseSeqConfig: {
 
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|-----------|------|
+| name | string | 必須 | ツール名 |
 | version | string | "latest" | ツールバージョン |
-| plugin | string | - | インストール前に追加するmiseプラグイン (例: "glab") |
-| exe | string | ツールキー | 実行ファイル名 |
-| depends | array | [] | 依存関係 |
+| package | string | - | runtime:tool形式 (例: npm:difit) |
+| plugin | string | - | インストール前に追加するmiseプラグイン |
+| exe | string | name | 実行ファイル名 |
+| disabled | bool | false | インストールをスキップ |
+| depends | array | [] | 依存関係（ツール名のみ） |
 | preinstall | array | [] | インストール前フック |
 | postinstall | array | [] | インストール後フック |
 
 ### 依存関係記法
 
 ```yaml
+tools:
+  - name: rust
+    version: 1.88
+    depends:
+      - gcc
+      - cargo
+```
 # 完全記法
 tools:
   rust:
