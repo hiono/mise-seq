@@ -7,6 +7,7 @@ before:
 builds:
   - id: mise-seq
     dir: .
+    binary: mise-seq
     goos:
       - linux
       - darwin
@@ -14,6 +15,10 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -s -w
+      - -X main.commit={{ .ShortCommit }}
+      - -X main.date={{ .CommitDate }}
 
 archives:
   - id: mise-seq
