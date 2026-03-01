@@ -489,8 +489,12 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	}
 
 	// Install tool
-	// Use toolName (full spec) for mise install, exeName is for reference only
-	toolSpec := fmt.Sprintf("%s@%s", toolName, tool.Version)
+	// Use package format if specified (e.g., npm:difit), otherwise use tool name
+	installName := toolName
+	if tool.Package != "" {
+		installName = tool.Package
+	}
+	toolSpec := fmt.Sprintf("%s@%s", installName, tool.Version)
 	_, result, err := c.InstallIfNotInstalled(ctx, toolSpec)
 	if err != nil {
 		// Check if it's a "not found" error - skip this tool
@@ -510,7 +514,7 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	}
 
 	// Set as global default (equivalent to mise use -g)
-	if err := c.SetGlobal(ctx, toolSpec); err != nil {
+	if err := c.SetGlobal(ctx, fmt.Sprintf("%s@%s", installName, tool.Version)); err != nil {
 		return fmt.Errorf("failed to set global default for %s: %w", toolName, err)
 	}
 
