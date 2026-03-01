@@ -28,15 +28,14 @@ package miseseq
 // Tool configuration - name is REQUIRED
 #ToolConfig: {
   name:        string                      // REQUIRED - tool name
-  enable?:     bool | *true                // Enable/disable tool installation
-  version?:    #Version                   // Version override
+  version?:    #Version                   // defaults to "latest"
   package?:    #Package                   // runtime:tool format (e.g., npm:difit)
   plugin?:     string                      // Mise plugin to use
-  exe?:        string                      // Executable name (defaults to name)
-  disabled?:   bool                        // Skip installation if true
-  depends?:    [...string]                 // List of tool names (NOT "name@version")
-  preinstall?:  #HookList                   // Tool-specific preinstall hooks
-  postinstall?: #HookList                   // Tool-specific postinstall hooks
+  exe?:        string | *name             // defaults to name
+  disabled?:   bool | *false              // defaults to false
+  depends?:    [...string]                // List of tool names (NOT "name@version")
+  preinstall?:  #HookList                  // Tool-specific preinstall hooks
+  postinstall?: #HookList                  // Tool-specific postinstall hooks
 }
 
 // NPM settings

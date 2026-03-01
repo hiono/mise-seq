@@ -494,7 +494,14 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	if tool.Package != "" {
 		installName = tool.Package
 	}
-	toolSpec := fmt.Sprintf("%s@%s", installName, tool.Version)
+
+	// Version defaults to "latest" if not specified
+	version := tool.Version
+	if version == "" {
+		version = "latest"
+	}
+
+	toolSpec := fmt.Sprintf("%s@%s", installName, version)
 	_, result, err := c.InstallIfNotInstalled(ctx, toolSpec)
 	if err != nil {
 		// Check if it's a "not found" error - skip this tool
