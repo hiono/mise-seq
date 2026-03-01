@@ -111,12 +111,12 @@ tools:
     version: latest
   - name: glab
     version: latest
-    plugin: glab  # Add mise plugin before installation
+    plugin: glab
   - name: difit
-    package: npm:difit  # runtime:tool format
+    package: npm:difit
   - name: gemini
     package: npm:@google/gemini-cli
-    disabled: true  # Skip installation
+    disabled: true
 
 defaults:
   preinstall:
@@ -134,14 +134,43 @@ settings:
 
 ```json
 {
-  "tools": {
-    "jq": { "version": "latest" },
-    "lazygit": { "version": "latest" }
-  },
-  "tools_order": ["jq", "lazygig"],
+  "tools": [
+    { "name": "jq", "version": "latest" },
+    { "name": "lazygit", "version": "latest" }
+  ],
   "defaults": {
     "preinstall": [{ "run": "echo Installing..." }]
   }
+}
+```
+
+### TOML
+
+```toml
+[[tools]]
+name = "jq"
+version = "latest"
+
+[[tools]]
+name = "lazygit"
+version = "latest"
+
+[defaults.preinstall]
+run = "echo Installing..."
+
+[settings.npm]
+package_manager = "pnpm"
+```
+
+### CUE
+
+```cue
+MiseSeqConfig: {
+    tools: [
+        {name: "jq", version: "latest"},
+        {name: "lazygit", version: "latest"}
+    ]
+    defaults: preinstall: [{run: "echo Installing..."}]
 }
 ```
 
@@ -178,21 +207,19 @@ MiseSeqConfig: {
 
 ### Configuration Reference
 
-All fields are optional unless marked as required.
-
 #### Tool Fields
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | Yes | - | Tool name (required) |
-| `version` | string | No | `"latest"` | Tool version |
-| `package` | string | No | - | runtime:tool format (e.g., `npm:difit`, `go:github.com/user/repo`) |
-| `plugin` | string | No | - | mise plugin to add before installation |
-| `exe` | string | No | `<name>` | Executable name |
-| `disabled` | bool | No | `false` | Skip installation if true |
-| `depends` | array | No | `[]` | Dependencies (tool names only) |
-| `preinstall` | array | No | `[]` | Hooks to run before installation |
-| `postinstall` | array | No | `[]` | Hooks to run after installation |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| name | string | required | Tool name |
+| version | string | "latest" | Tool version |
+| package | string | - | runtime:tool format |
+| plugin | string | - | mise plugin to add |
+| exe | string | name | Executable name |
+| disabled | bool | false | Skip installation |
+| depends | array | [] | Dependencies |
+| preinstall | array | [] | Hooks before install |
+| postinstall | array | [] | Hooks after install |
 
 #### Dependency Syntax
 
@@ -204,44 +231,24 @@ tools:
       - gcc
       - cargo
 ```
-  rust:
-    version: 1.88
-    depends:
-      - gcc    # same as gcc@latest
-      - cargo  # same as cargo@latest
-```
 
 **Key Points:**
-- @version defaults to @latest
-- version field defaults to "latest" 
-- exe field defaults to tool key name
-
-#### Minimal Configuration (All Omitted)
-
-```yaml
-# All defaults: version=latest, exe=tool name, depends=[]
-tools:
-  jq:
-  gcc:
-  rust:
-```
+- version defaults to "latest"
+- exe defaults to tool name
 
 ---
 
 ## Hooks
 
-The following hook types are supported:
+Hook types:
+- preinstall: before tool installation
+- postinstall: after tool installation
 
-- `preinstall`: Run before tool installation
-- `postinstall`: Run after tool installation
+### Timing
 
-### Hook Timing
-
-Hooks can be configured to run on specific events:
-
-- `install`: Only on first install
-- `update`: Only on version upgrade
-- `always`: Always run
+- install: first install only
+- update: version upgrade only
+- always: every run
 
 ### Hook Example
 
@@ -273,12 +280,11 @@ defaults:
 
 ### State Management
 
-Hooks use SHA256 markers to skip unchanged hooks:
-
+SHA256 markers track hook changes:
 - First run: executes hook, saves SHA256
-- Subsequent runs: compares SHA256, skips if unchanged
-- `--force-hooks`: force execution even if unchanged
-- `--postinstall-on-update`: run postinstall on version change
+- Next runs: compares SHA256, skips if unchanged
+- --force-hooks: force execution
+- --postinstall-on-update: run postinstall on version change
 
 ---
 
@@ -286,37 +292,37 @@ Hooks use SHA256 markers to skip unchanged hooks:
 
 ### Commands
 
-| Command   | Description                        |
-|-----------|-----------------------------------|
-| `install` | Install all tools (default)       |
-| `upgrade` | Upgrade installed tools           |
-| `list`    | List installed tools              |
-| `status`  | Show status of configured tools   |
+| Command  | Description |
+|----------|-------------|
+| install  | Install all tools |
+| upgrade  | Upgrade tools |
+| list     | List tools |
+| status   | Show tool status |
 
 ### Global Flags
 
-| Flag                      | Description                        |
-|---------------------------|------------------------------------|
-| `-c <file>`               | Config file (default: tools.yaml)   |
-| `--dry-run`               | Dry run mode                       |
-| `--force-hooks`           | Force hook execution               |
-| `--postinstall-on-update`| Run postinstall on version change |
-| `-v`                      | Verbose output                     |
-| `--version`               | Show version                       |
-| `--help`                  | Show help                          |
+| Flag | Description |
+|------|-------------|
+| -c file | Config file |
+| --dry-run | Dry run |
+| --force-hooks | Force hook execution |
+| --postinstall-on-update | Run postinstall on update |
+| -v | Verbose |
+| --version | Show version |
+| --help | Show help |
 
 ### Environment Variables
 
-| Variable                    | Description                    |
-|-----------------------------|-------------------------------|
-| `DRY_RUN`                  | Enable dry run mode            |
-| `DEBUG`                    | Enable debug output           |
-| `FORCE_HOOKS`              | Force hook execution          |
-| `RUN_POSTINSTALL_ON_UPDATE`| Run postinstall on update     |
-| `STATE_DIR`                | Custom state directory        |
-| `CUE_VERSION`              | CUE version for bootstrap     |
-| `MISE_SHIMS_DEFAULT`       | Mise shims path               |
-| `MISE_DATA_DIR`            | Mise data directory           |
+| Variable | Description |
+|----------|-------------|
+| DRY_RUN | Dry run mode |
+| DEBUG | Debug output |
+| FORCE_HOOKS | Force hook execution |
+| RUN_POSTINSTALL_ON_UPDATE | Run postinstall on update |
+| STATE_DIR | Custom state directory |
+| CUE_VERSION | CUE version |
+| MISE_SHIMS_DEFAULT | Mise shims path |
+| MISE_DATA_DIR | Mise data directory |
 
 ---
 
@@ -416,20 +422,20 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 Go 1.21+
 
-### Auto-install behavior
+### Auto-install
 
 If mise is not installed:
 - Downloads mise to ~/.local/bin/mise
-- Adds to PATH after download
-- mise becomes available for subsequent commands
+- Adds to PATH
+- mise becomes available
 
-**After installation, restart your shell:**
+After installation:
 
 ```bash
 exec $SHELL
 ```
 
-Verify with: `mise --version`
+Verify: `mise --version`
 
 ---
 

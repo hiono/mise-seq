@@ -129,18 +129,15 @@ settings:
     package_manager: pnpm
   experimental: true
 ```
-  experimental: true
-```
 
 ### JSON
 
 ```json
 {
-  "tools": {
-    "jq": { "version": "latest" },
-    "lazygit": { "version": "latest" }
-  },
-  "tools_order": ["jq", "lazygit"],
+  "tools": [
+    { "name": "jq", "version": "latest" },
+    { "name": "lazygit", "version": "latest" }
+  ],
   "defaults": {
     "preinstall": [{ "run": "echo Installing..." }]
   }
@@ -150,13 +147,13 @@ settings:
 ### TOML
 
 ```toml
-[tools.jq]
+[[tools]]
+name = "jq"
 version = "latest"
 
-[tools.lazygit]
+[[tools]]
+name = "lazygit"
 version = "latest"
-
-tools_order = ["jq", "lazygit"]
 
 [defaults.preinstall]
 run = "echo Installing..."
@@ -169,18 +166,15 @@ package_manager = "pnpm"
 
 ```cue
 MiseSeqConfig: {
-    tools: {
-        jq: version: "latest"
-        lazygit: version: "latest"
-    }
-    tools_order: ["jq", "lazygit"]
+    tools: [
+        {name: "jq", version: "latest"},
+        {name: "lazygit", version: "latest"}
+    ]
     defaults: preinstall: [{run: "echo Installing..."}]
 }
 ```
 
 ### 配置参考
-
-所有字段都是可选的。
 
 #### 工具字段
 
@@ -188,13 +182,13 @@ MiseSeqConfig: {
 |------|------|--------|------|
 | name | string | 必需 | 工具名称 |
 | version | string | "latest" | 工具版本 |
-| package | string | - | runtime:tool格式 (例: npm:difit) |
-| plugin | string | - | 安装前要添加的mise插件 |
+| package | string | - | runtime:tool格式 |
+| plugin | string | - | mise插件 |
 | exe | string | name | 可执行文件名 |
 | disabled | bool | false | 跳过安装 |
-| depends | array | [] | 依赖（仅工具名） |
-| preinstall | array | [] | 安装前运行的钩子 |
-| postinstall | array | [] | 安装后运行的钩子 |
+| depends | array | [] | 依赖 |
+| preinstall | array | [] | 安装前钩子 |
+| postinstall | array | [] | 安装后钩子 |
 
 #### 依赖语法
 
@@ -206,55 +200,24 @@ tools:
       - gcc
       - cargo
 ```
-# 完整语法
-tools:
-  rust:
-    version: 1.88
-    depends:
-      - gcc@latest    # 显式指定 @version
-      - cargo@latest  # 显式指定 @latest
 
-# 简写（推荐）
-tools:
-  rust:
-    version: 1.88
-    depends:
-      - gcc    # 等同于 gcc@latest
-      - cargo  # 等同于 cargo@latest
-```
-
-**要点:**
-- `@version` 可省略 → 默认为 `@latest`
-- `version` 字段可省略 → 默认为 `"latest"`
-- `exe` 字段可省略 → 默认为工具键名
-- 空数组 `[]` 等同于省略字段
-
-#### 最小配置（全部省略）
-
-```yaml
-# 全部默认: version=latest, exe=工具名, depends=[]
-tools:
-  jq:
-  gcc:
-  rust:
-```
+要点:
+- version默认为"latest"
+- exe默认为工具名
 
 ---
 
 ## 钩子
 
-支持以下钩子类型：
-
-- `preinstall`: 安装前运行
-- `postinstall`: 安装后运行
+钩子类型:
+- preinstall: 安装前
+- postinstall: 安装后
 
 ### 钩子时机
 
-钩子可配置为在特定事件时运行：
-
-- `install`: 仅首次安装时
-- `update`: 仅版本升级时
-- `always`: 始终运行
+- install: 首次安装
+- update: 版本升级
+- always: 每次运行
 
 ### 钩子示例
 
@@ -286,12 +249,11 @@ defaults:
 
 ### 状态管理
 
-钩子使用 SHA256 标记跳过未更改的钩子：
-
-- 首次运行：执行钩子，保存 SHA256
-- 后续运行：比较 SHA256，一致则跳过
-- `--force-hooks`: 强制执行即使未更改
-- `--postinstall-on-update`: 版本变更时运行 postinstall
+SHA256标记追踪钩子变化:
+- 首次运行: 执行钩子, 保存SHA256
+- 后续运行: 比较SHA256, 一致则跳过
+- --force-hooks: 强制执行
+- --postinstall-on-update: 升级时运行postinstall
 
 ---
 
@@ -308,28 +270,28 @@ defaults:
 
 ### 全局标志
 
-| 标志                      | 描述                     |
-|--------------------------|------------------------|
-| `-c <file>`              | 配置文件（默认: tools.yaml） |
-| `--dry-run`              | 试运行模式               |
-| `--force-hooks`          | 强制执行钩子             |
-| `--postinstall-on-update`| 更新时运行 postinstall   |
-| `-v`                     | 详细输出                 |
-| `--version`              | 显示版本                 |
-| `--help`                 | 显示帮助                 |
+| 标志 | 描述 |
+|------|------|
+| -c file | 配置文件 |
+| --dry-run | 试运行 |
+| --force-hooks | 强制执行钩子 |
+| --postinstall-on-update | 升级时postinstall |
+| -v | 详细输出 |
+| --version | 版本 |
+| --help | 帮助 |
 
 ### 环境变量
 
-| 变量                       | 描述                  |
-|---------------------------|---------------------|
-| `DRY_RUN`                 | 启用试运行            |
-| `DEBUG`                  | 启用调试输出          |
-| `FORCE_HOOKS`           | 强制执行钩子          |
-| `RUN_POSTINSTALL_ON_UPDATE`| 更新时运行 postinstall |
-| `STATE_DIR`               | 自定义状态目录        |
-| `CUE_VERSION`           | CUE 版本             |
-| `MISE_SHIMS_DEFAULT`    | Mise shims 路径      |
-| `MISE_DATA_DIR`          | Mise 数据目录        |
+| 变量 | 描述 |
+|------|------|
+| DRY_RUN | 试运行 |
+| DEBUG | 调试输出 |
+| FORCE_HOOKS | 强制钩子 |
+| RUN_POSTINSTALL_ON_UPDATE | 升级postinstall |
+| STATE_DIR | 状态目录 |
+| CUE_VERSION | CUE版本 |
+| MISE_SHIMS_DEFAULT | mise shims路径 |
+| MISE_DATA_DIR | mise数据目录 |
 
 ---
 
@@ -427,16 +389,16 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 ## 前置条件
 
-- Go 1.21+
+Go 1.21+
 
-### 自动安装行为
+### 自动安装
 
-如果系统上未安装 mise：
-- 自动下载 mise 到 ~/.local/bin/mise
-- 下载后自动添加到 PATH
-- 后续命令可使用 mise
+未安装mise时:
+- 下载mise到~/.local/bin/mise
+- 添加到PATH
+- 后续命令可使用
 
-**安装后，重启shell或运行:**
+安装后:
 
 ```bash
 exec $SHELL

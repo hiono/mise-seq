@@ -109,12 +109,12 @@ tools:
     version: latest
   - name: glab
     version: latest
-    plugin: glab  # インストール前にmiseプラグインを追加
+    plugin: glab
   - name: difit
-    package: npm:difit  # runtime:tool形式
+    package: npm:difit
   - name: gemini
     package: npm:@google/gemini-cli
-    disabled: true  # インストールをスキップ
+    disabled: true
 
 defaults:
   preinstall:
@@ -132,11 +132,10 @@ settings:
 
 ```json
 {
-  "tools": {
-    "jq": { "version": "latest" },
-    "lazygit": { "version": "latest" }
-  },
-  "tools_order": ["jq", "lazygit"],
+  "tools": [
+    { "name": "jq", "version": "latest" },
+    { "name": "lazygit", "version": "latest" }
+  ],
   "defaults": {
     "preinstall": [{ "run": "echo Installing..." }]
   }
@@ -146,13 +145,13 @@ settings:
 ### TOML
 
 ```toml
-[tools.jq]
+[[tools]]
+name = "jq"
 version = "latest"
 
-[tools.lazygit]
+[[tools]]
+name = "lazygit"
 version = "latest"
-
-tools_order = ["jq", "lazygit"]
 
 [defaults.preinstall]
 run = "echo Installing..."
@@ -165,11 +164,10 @@ package_manager = "pnpm"
 
 ```cue
 MiseSeqConfig: {
-    tools: {
-        jq: version: "latest"
-        lazygit: version: "latest"
-    }
-    tools_order: ["jq", "lazygit"]
+    tools: [
+        {name: "jq", version: "latest"},
+        {name: "lazygit", version: "latest"}
+    ]
     defaults: preinstall: [{run: "echo Installing..."}]
 }
 ```
@@ -204,27 +202,10 @@ tools:
       - gcc
       - cargo
 ```
-# 完全記法
-tools:
-  rust:
-    version: 1.88
-    depends:
-      - gcc@latest
-      - cargo@latest
-
-# 省略記法
-tools:
-  rust:
-    version: 1.88
-    depends:
-      - gcc
-      - cargo
-```
 
 ポイント:
-- @version、省略時は@latest
 - version、省略時は"latest"
-- exe、省略時はツールキー名
+- exe、省略時はツール名
 
 ---
 
@@ -232,8 +213,8 @@ tools:
 
 ### フックタイプ
 
-preinstall: インストール前に実行
-postinstall: インストール後に実行
+preinstall: インストール前
+postinstall: インストール後
 
 ### 実行タイミング
 
@@ -259,8 +240,6 @@ tools:
 
 ### デフォルトフック
 
-全ツールにフックを適用:
-
 ```yaml
 defaults:
   preinstall:
@@ -272,11 +251,10 @@ defaults:
 ### ステート管理
 
 SHA256マーカーで変更を検出:
-
-初実行: フックを実行、SHA256を保存
-以降: SHA256を比較、変化なければスキップ
---force-hooks: 強制実行
---postinstall-on-update: 更新時にpostinstallを実行
+- 初実行: フックを実行、SHA256を保存
+- 以降: SHA256を比較、未変更ならスキップ
+- --force-hooks: 強制実行
+- --postinstall-on-update: 更新時にpostinstallを実行
 
 ---
 
@@ -295,24 +273,24 @@ SHA256マーカーで変更を検出:
 
 | フラグ | 説明 |
 |--------|------|
-| -c <file> | 設定ファイル |
+| -c file | 設定ファイル |
 | --dry-run | ドライラン |
 | --force-hooks | フックを強制実行 |
 | --postinstall-on-update | 更新時にpostinstallを実行 |
 | -v | 詳細出力 |
-| --version | バージョンを表示 |
-| --help | ヘルプを表示 |
+| --version | バージョン |
+| --help | ヘルプ |
 
 ### 環境変数
 
 | 変数 | 説明 |
 |------|------|
-| DRY_RUN | ドライランを有効化 |
-| DEBUG | デバッグ出力を有効化 |
-| FORCE_HOOKS | フックを強制実行 |
-| RUN_POSTINSTALL_ON_UPDATE | 更新時にpostinstallを実行 |
-| STATE_DIR | カスタムステートディレクトリ |
-| CUE_VERSION | ブートストラップ用CUEバージョン |
+| DRY_RUN | ドライラン |
+| DEBUG | デバッグ出力 |
+| FORCE_HOOKS | フック強制実行 |
+| RUN_POSTINSTALL_ON_UPDATE | 更新時postinstall |
+| STATE_DIR | ステートディレクトリ |
+| CUE_VERSION | CUEバージョン |
 | MISE_SHIMS_DEFAULT | mise shimsパス |
 | MISE_DATA_DIR | miseデータディレクトリ |
 
@@ -400,14 +378,14 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 Go 1.21以上
 
-### mise未安装時の動作
+### mise自動インストール
 
-miseがシステムにインストールされていない場合:
-~/.local/bin/mise に自動ダウンロード
-ダウンロード後、自動的にPATHに追加
-以降のコマンドでmiseが利用可能
+mise未安装の場合:
+- ~/.local/bin/mise にダウンロード
+- PATHに追加
+- 以降コマンドでmise可以利用
 
-**インストール後、シェルを再起動するか以下を実行:**
+インストール後:
 
 ```bash
 exec $SHELL
