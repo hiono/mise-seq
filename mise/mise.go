@@ -16,18 +16,32 @@ import (
 // Client wraps mise CLI invocations
 type Client struct {
 	timeout time.Duration
+	dryRun  bool
+	verbose bool
 }
 
 // NewClient creates a new mise client
 func NewClient() *Client {
 	return &Client{
 		timeout: 10 * time.Minute,
+		dryRun:  false,
+		verbose: false,
 	}
 }
 
 // SetTimeout sets the command timeout
 func (c *Client) SetTimeout(timeout time.Duration) {
 	c.timeout = timeout
+}
+
+// SetDryRun sets the dry run mode
+func (c *Client) SetDryRun(dryRun bool) {
+	c.dryRun = dryRun
+}
+
+// SetVerbose sets the verbose mode
+func (c *Client) SetVerbose(verbose bool) {
+	c.verbose = verbose
 }
 
 // getMiseEnv returns common environment variables for mise commands
@@ -54,11 +68,18 @@ type Result struct {
 
 // InstallWithOutput installs a tool and captures output
 func (c *Client) InstallWithOutput(ctx context.Context, tool string) (*Result, error) {
+	if c.dryRun {
+		config.Info("DRYRUN: mise install %s", tool)
+		return &Result{}, nil
+	}
+
 	if c.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 	}
+
+	config.Debug("Running: mise install %s", tool)
 
 	cmd := exec.CommandContext(ctx, "mise", "install", tool)
 	cmd.Env = append(os.Environ(), getMiseEnv()...)
@@ -137,13 +158,52 @@ func (c *Client) InstallIfNotInstalled(ctx context.Context, tool string) (bool, 
 	return true, result, err
 }
 
+// AddPluginIfNeeded adds a mise plugin if specified in tool config
+func (c *Client) AddPluginIfNeeded(ctx context.Context, toolName, plugin string) error {
+	if plugin == "" {
+		return nil
+	}
+
+	if c.dryRun {
+		config.Info("DRYRUN: mise plugin add %s", plugin)
+		return nil
+	}
+
+	config.Debug("Adding mise plugin: %s", plugin)
+
+	cmd := exec.CommandContext(ctx, "mise", "plugin", "add", plugin)
+	cmd.Env = append(os.Environ(), getMiseEnv()...)
+
+	stdout := new(strings.Builder)
+	stderr := new(strings.Builder)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Run()
+	if err != nil {
+		output := stderr.String()
+		if strings.Contains(output, "already installed") || strings.Contains(output, "already added") {
+			return nil
+		}
+		return fmt.Errorf("mise plugin add failed: %s", output)
+	}
+	return nil
+}
+
 // SetGlobal sets a tool as global default (mise use -g)
 func (c *Client) SetGlobal(ctx context.Context, tool string) error {
+	if c.dryRun {
+		config.Info("DRYRUN: mise use -g %s", tool)
+		return nil
+	}
+
 	if c.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 	}
+
+	config.Debug("Running: mise use -g %s", tool)
 
 	cmd := exec.CommandContext(ctx, "mise", "use", "-g", tool)
 	cmd.Env = append(os.Environ(), getMiseEnv()...)
@@ -380,6 +440,11 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 	tool, exists := cfg.Tools[toolName]
 	if !exists {
 		return fmt.Errorf("tool %s not found in config", toolName)
+	}
+
+	// Add plugin if specified
+	if err := c.AddPluginIfNeeded(ctx, toolName, tool.Plugin); err != nil {
+		return fmt.Errorf("failed to add plugin for %s: %w", toolName, err)
 	}
 
 	// Run preinstall hooks

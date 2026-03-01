@@ -22,6 +22,7 @@ type Config struct {
 // Tool represents a single tool configuration
 type Tool struct {
 	Version     string   `json:"version,omitempty" yaml:"version,omitempty" toml:"version,omitempty"`
+	Plugin      string   `json:"plugin,omitempty" yaml:"plugin,omitempty" toml:"plugin,omitempty"`
 	Exe         string   `json:"exe,omitempty" yaml:"exe,omitempty" toml:"exe,omitempty"`
 	Preinstall  []Hook   `json:"preinstall,omitempty" yaml:"preinstall,omitempty" toml:"preinstall,omitempty"`
 	Postinstall []Hook   `json:"postinstall,omitempty" yaml:"postinstall,omitempty" toml:"postinstall,omitempty"`

@@ -28,6 +28,7 @@ package miseseq
 //   depends: []
 #ToolConfig: {
   version?:    #Version
+  plugin?:     string
   exe?:        string
   depends?:    [...string]
   preinstall?:  #HookList
