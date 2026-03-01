@@ -29,11 +29,11 @@ func ParseToolRef(s string) ToolRef {
 
 // ToolResolver resolves tool dependencies and determines installation order
 type ToolResolver struct {
-	tools map[string]Tool
+	tools []Tool
 }
 
 // NewToolResolver creates a new tool resolver
-func NewToolResolver(tools map[string]Tool) *ToolResolver {
+func NewToolResolver(tools []Tool) *ToolResolver {
 	return &ToolResolver{
 		tools: tools,
 	}
@@ -41,9 +41,16 @@ func NewToolResolver(tools map[string]Tool) *ToolResolver {
 
 // ResolveOrder returns the installation order based on dependencies
 // Uses topological sort (Kahn's algorithm)
+// Note: tools list is already ordered, this validates and respects depends
 func (r *ToolResolver) ResolveOrder() ([]string, error) {
 	if r.tools == nil {
 		return nil, nil
+	}
+
+	// Build a map for quick lookup
+	toolMap := make(map[string]int) // name -> index
+	for i, tool := range r.tools {
+		toolMap[tool.Name] = i
 	}
 
 	// Build dependency graph
@@ -52,13 +59,13 @@ func (r *ToolResolver) ResolveOrder() ([]string, error) {
 	inDegree := make(map[string]int)
 	deps := make(map[string][]string)
 
-	for name := range r.tools {
-		inDegree[name] = 0
-		deps[name] = nil
+	for _, tool := range r.tools {
+		inDegree[tool.Name] = 0
+		deps[tool.Name] = nil
 	}
 
 	// Process each tool's depends
-	for name, tool := range r.tools {
+	for _, tool := range r.tools {
 		if len(tool.Depends) == 0 {
 			continue
 		}
@@ -67,12 +74,12 @@ func (r *ToolResolver) ResolveOrder() ([]string, error) {
 			ref := ParseToolRef(dep)
 
 			// Check if dependency exists in tools
-			if _, exists := r.tools[ref.Name]; !exists {
-				return nil, fmt.Errorf("tool '%s' depends on unknown tool '%s'", name, ref.Name)
+			if _, exists := toolMap[ref.Name]; !exists {
+				return nil, fmt.Errorf("tool '%s' depends on unknown tool '%s'", tool.Name, ref.Name)
 			}
 
-			// Add edge: ref.Name -> name (ref.Name must be installed before name)
-			inDegree[name]++
+			// Add edge: ref.Name -> tool.Name (ref.Name must be installed before tool.Name)
+			inDegree[tool.Name]++
 		}
 
 		// Store dependencies
@@ -81,7 +88,7 @@ func (r *ToolResolver) ResolveOrder() ([]string, error) {
 			ref := ParseToolRef(dep)
 			depNames = append(depNames, ref.Name)
 		}
-		deps[name] = depNames
+		deps[tool.Name] = depNames
 	}
 
 	// Kahn's algorithm for topological sort
@@ -156,12 +163,18 @@ func ValidateDependencies(cfg *Config) error {
 		return nil
 	}
 
+	// Build tool name set for quick lookup
+	toolSet := make(map[string]bool)
+	for _, tool := range cfg.Tools {
+		toolSet[tool.Name] = true
+	}
+
 	// Check that all dependencies reference existing tools
-	for name, tool := range cfg.Tools {
+	for _, tool := range cfg.Tools {
 		for _, dep := range tool.Depends {
 			ref := ParseToolRef(dep)
-			if _, exists := cfg.Tools[ref.Name]; !exists {
-				return fmt.Errorf("tool '%s' depends on unknown tool '%s'", name, ref.Name)
+			if !toolSet[ref.Name] {
+				return fmt.Errorf("tool '%s' depends on unknown tool '%s'", tool.Name, ref.Name)
 			}
 		}
 	}

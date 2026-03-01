@@ -12,11 +12,18 @@ func TestParseJSON(t *testing.T) {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 
-	if len(cfg.ToolsOrder) != 3 {
-		t.Errorf("Expected 3 tools in order, got %d", len(cfg.ToolsOrder))
+	if len(cfg.Tools) != 2 {
+		t.Errorf("Expected 2 tools, got %d", len(cfg.Tools))
 	}
 
-	if _, ok := cfg.Tools["go"]; !ok {
+	found := false
+	for _, tool := range cfg.Tools {
+		if tool.Name == "go" {
+			found = true
+			break
+		}
+	}
+	if !found {
 		t.Error("Expected 'go' tool in config")
 	}
 }
@@ -27,8 +34,8 @@ func TestParseYAML(t *testing.T) {
 		t.Fatalf("Failed to parse YAML: %v", err)
 	}
 
-	if len(cfg.ToolsOrder) != 3 {
-		t.Errorf("Expected 3 tools in order, got %d", len(cfg.ToolsOrder))
+	if len(cfg.Tools) != 3 {
+		t.Errorf("Expected 3 tools in order, got %d", len(cfg.Tools))
 	}
 }
 
@@ -64,8 +71,15 @@ func TestLoader(t *testing.T) {
 		t.Fatalf("Failed to load JSON: %v", err)
 	}
 
-	if cfg.Tools["go"].Version != "1.21" {
-		t.Errorf("Expected go version 1.21, got %s", cfg.Tools["go"].Version)
+	found := false
+	for _, tool := range cfg.Tools {
+		if tool.Name == "go" && tool.Version == "1.21" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected go version 1.21")
 	}
 
 	// Test YAML
@@ -74,8 +88,15 @@ func TestLoader(t *testing.T) {
 		t.Fatalf("Failed to load YAML: %v", err)
 	}
 
-	if cfg.Tools["node"].Version != "20" {
-		t.Errorf("Expected node version 20, got %s", cfg.Tools["node"].Version)
+	found = false
+	for _, tool := range cfg.Tools {
+		if tool.Name == "node" && tool.Version == "20" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected node version 20")
 	}
 }
 

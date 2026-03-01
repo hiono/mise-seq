@@ -1,15 +1,12 @@
-tools_order:
-  - go
-  - node
-  - python
-
 tools:
-  go:
+  - name: go
     version: "1.21"
     exe: go
-  node:
+  - name: node
     version: "20"
     exe: node
+  - name: python
+    version: "3.12"
 
 defaults:
   preinstall:

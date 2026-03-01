@@ -14,11 +14,13 @@ func TestConfig_MergeDefaults(t *testing.T) {
 				{Run: "echo default-postinstall"},
 			},
 		},
-		Tools: map[string]Tool{
-			"tool1": {
+		Tools: []Tool{
+			{
+				Name:    "tool1",
 				Version: "1.0.0",
 			},
-			"tool2": {
+			{
+				Name:       "tool2",
 				Version:    "2.0.0",
 				Preinstall: []Hook{{Run: "echo tool2-preinstall"}},
 			},
@@ -28,19 +30,30 @@ func TestConfig_MergeDefaults(t *testing.T) {
 	cfg.MergeDefaults()
 
 	// tool1 should get default hooks
-	if len(cfg.Tools["tool1"].Preinstall) != 1 {
-		t.Errorf("Expected tool1 to have 1 preinstall hook, got %d", len(cfg.Tools["tool1"].Preinstall))
+	var tool1 *Tool
+	var tool2 *Tool
+	for i := range cfg.Tools {
+		if cfg.Tools[i].Name == "tool1" {
+			tool1 = &cfg.Tools[i]
+		}
+		if cfg.Tools[i].Name == "tool2" {
+			tool2 = &cfg.Tools[i]
+		}
 	}
-	if cfg.Tools["tool1"].Preinstall[0].Run != "echo default-preinstall" {
-		t.Errorf("Expected tool1 preinstall hook to be default, got %s", cfg.Tools["tool1"].Preinstall[0].Run)
+
+	if tool1 == nil || len(tool1.Preinstall) != 1 {
+		t.Errorf("Expected tool1 to have 1 preinstall hook, got %d", len(tool1.Preinstall))
+	}
+	if tool1.Preinstall[0].Run != "echo default-preinstall" {
+		t.Errorf("Expected tool1 preinstall hook to be default, got %s", tool1.Preinstall[0].Run)
 	}
 
 	// tool2 should keep its own hook (not overwritten)
-	if len(cfg.Tools["tool2"].Preinstall) != 1 {
-		t.Errorf("Expected tool2 to have 1 preinstall hook, got %d", len(cfg.Tools["tool2"].Preinstall))
+	if tool2 == nil || len(tool2.Preinstall) != 1 {
+		t.Errorf("Expected tool2 to have 1 preinstall hook, got %d", len(tool2.Preinstall))
 	}
-	if cfg.Tools["tool2"].Preinstall[0].Run != "echo tool2-preinstall" {
-		t.Errorf("Expected tool2 preinstall hook to be tool-specific, got %s", cfg.Tools["tool2"].Preinstall[0].Run)
+	if tool2.Preinstall[0].Run != "echo tool2-preinstall" {
+		t.Errorf("Expected tool2 preinstall hook to be tool-specific, got %s", tool2.Preinstall[0].Run)
 	}
 }
 
@@ -160,32 +173,12 @@ func TestValidateConfig(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "valid config with tools_order",
+			name: "valid config with tools",
 			cfg: &Config{
-				Tools: map[string]Tool{
-					"jq":   {Version: "latest"},
-					"node": {Version: "20"},
+				Tools: []Tool{
+					{Name: "jq", Version: "latest"},
+					{Name: "node", Version: "20"},
 				},
-				ToolsOrder: []string{"jq", "node"},
-			},
-			expectErr: false,
-		},
-		{
-			name: "tools_order not in tools",
-			cfg: &Config{
-				Tools: map[string]Tool{
-					"jq": {Version: "latest"},
-				},
-				ToolsOrder: []string{"jq", "node"},
-			},
-			expectErr: true,
-			errMsg:    "tool_order contains 'node' which is not in tools",
-		},
-		{
-			name: "empty tools_order with tools",
-			cfg: &Config{
-				Tools:      map[string]Tool{"jq": {Version: "latest"}},
-				ToolsOrder: []string{},
 			},
 			expectErr: false,
 		},

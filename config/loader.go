@@ -66,20 +66,38 @@ func ParseFileWithFormat(path, format string) (*Config, error) {
 	return loader.Parse(path)
 }
 
-// GetToolOrder returns the tools_order from a config
+// GetToolOrder returns the tools from config (list order = installation order)
 func GetToolOrder(cfg *Config) []string {
 	if cfg == nil {
 		return nil
 	}
-	return cfg.ToolsOrder
+	// Tools are in installation order already (list order)
+	names := make([]string, len(cfg.Tools))
+	for i, tool := range cfg.Tools {
+		names[i] = tool.Name
+	}
+	return names
 }
 
-// GetTools returns the tools map from a config
-func GetTools(cfg *Config) map[string]Tool {
+// GetTools returns the tools from config
+func GetTools(cfg *Config) []Tool {
 	if cfg == nil {
 		return nil
 	}
 	return cfg.Tools
+}
+
+// GetToolByName returns a tool by name
+func GetToolByName(cfg *Config, name string) *Tool {
+	if cfg == nil {
+		return nil
+	}
+	for i := range cfg.Tools {
+		if cfg.Tools[i].Name == name {
+			return &cfg.Tools[i]
+		}
+	}
+	return nil
 }
 
 // GetDefaults returns the defaults from a config

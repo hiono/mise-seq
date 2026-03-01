@@ -83,12 +83,14 @@ func TestExtractHookScripts_Empty(t *testing.T) {
 
 func TestGetToolHooks(t *testing.T) {
 	cfg := &config.Config{
-		Tools: map[string]config.Tool{
-			"tool1": {
+		Tools: []config.Tool{
+			{
+				Name:        "tool1",
 				Preinstall:  []config.Hook{{Run: "tool1-preinstall"}},
 				Postinstall: []config.Hook{{Run: "tool1-postinstall"}},
 			},
-			"tool2": {
+			{
+				Name:       "tool2",
 				Preinstall: []config.Hook{{Run: "tool2-preinstall"}},
 			},
 		},

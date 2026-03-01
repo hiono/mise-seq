@@ -1,7 +1,5 @@
 package config
 
-import "fmt"
-
 // When defines when a hook should run
 type When string
 
@@ -13,20 +11,22 @@ const (
 
 // Config represents the unified configuration structure
 type Config struct {
-	ToolsOrder []string        `json:"tools_order,omitempty" yaml:"tools_order,omitempty" toml:"tools_order,omitempty"`
-	Tools      map[string]Tool `json:"tools,omitempty" yaml:"tools,omitempty" toml:"tools,omitempty"`
-	Defaults   *Defaults       `json:"defaults,omitempty" yaml:"defaults,omitempty" toml:"defaults,omitempty"`
-	Settings   *Settings       `json:"settings,omitempty" yaml:"settings,omitempty" toml:"settings,omitempty"`
+	Tools    []Tool    `json:"tools,omitempty" yaml:"tools,omitempty" toml:"tools,omitempty"`
+	Defaults *Defaults `json:"defaults,omitempty" yaml:"defaults,omitempty" toml:"defaults,omitempty"`
+	Settings *Settings `json:"settings,omitempty" yaml:"settings,omitempty" toml:"settings,omitempty"`
 }
 
 // Tool represents a single tool configuration
 type Tool struct {
+	Name        string   `json:"name" yaml:"name" toml:"name"`
 	Version     string   `json:"version,omitempty" yaml:"version,omitempty" toml:"version,omitempty"`
+	Package     string   `json:"package,omitempty" yaml:"package,omitempty" toml:"package,omitempty"`
 	Plugin      string   `json:"plugin,omitempty" yaml:"plugin,omitempty" toml:"plugin,omitempty"`
 	Exe         string   `json:"exe,omitempty" yaml:"exe,omitempty" toml:"exe,omitempty"`
+	Disabled    bool     `json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Depends     []string `json:"depends,omitempty" yaml:"depends,omitempty" toml:"depends,omitempty"`
 	Preinstall  []Hook   `json:"preinstall,omitempty" yaml:"preinstall,omitempty" toml:"preinstall,omitempty"`
 	Postinstall []Hook   `json:"postinstall,omitempty" yaml:"postinstall,omitempty" toml:"postinstall,omitempty"`
-	Depends     []string `json:"depends,omitempty" yaml:"depends,omitempty" toml:"depends,omitempty"`
 }
 
 // Hook represents a preinstall or postinstall hook
@@ -78,7 +78,8 @@ func (c *Config) MergeDefaults() {
 		return
 	}
 
-	for name, tool := range c.Tools {
+	for i := range c.Tools {
+		tool := &c.Tools[i]
 		// Merge preinstall hooks
 		if len(tool.Preinstall) == 0 && len(c.Defaults.Preinstall) > 0 {
 			tool.Preinstall = make([]Hook, len(c.Defaults.Preinstall))
@@ -90,8 +91,6 @@ func (c *Config) MergeDefaults() {
 			tool.Postinstall = make([]Hook, len(c.Defaults.Postinstall))
 			copy(tool.Postinstall, c.Defaults.Postinstall)
 		}
-
-		c.Tools[name] = tool
 	}
 }
 
@@ -101,21 +100,7 @@ func ValidateConfig(cfg *Config) error {
 		return nil
 	}
 
-	// Check tools_order is subset of tools
-	if cfg.ToolsOrder != nil && cfg.Tools != nil {
-		toolSet := make(map[string]bool)
-		for name := range cfg.Tools {
-			toolSet[name] = true
-		}
-
-		for _, name := range cfg.ToolsOrder {
-			if !toolSet[name] {
-				return fmt.Errorf("tool_order contains '%s' which is not in tools", name)
-			}
-		}
-	}
-
-	// Validate dependencies
+	// Validate dependencies (now in validation.go)
 	if err := ValidateDependencies(cfg); err != nil {
 		return err
 	}

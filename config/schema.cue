@@ -3,6 +3,10 @@ package miseseq
 // Version can be string, float, or empty (defaults to latest)
 #Version: string | float | *"" | "latest"
 
+// Package format: "runtime:tool" (no @version allowed)
+// Examples: "npm:difit", "go:github.com/user/repo", "npm:@scope/package"
+#Package: string
+
 // Hook trigger timing
 #When: "install" | "update" | "always"
 
@@ -21,18 +25,18 @@ package miseseq
   postinstall?: #HookList
 }
 
-// Tool configuration
-// All fields are optional - defaults are:
-//   version: "latest"
-//   exe: <tool name>
-//   depends: []
+// Tool configuration - name is REQUIRED
 #ToolConfig: {
-  version?:    #Version
-  plugin?:     string
-  exe?:        string
-  depends?:    [...string]
-  preinstall?:  #HookList
-  postinstall?: #HookList
+  name:        string                      // REQUIRED - tool name
+  enable?:     bool | *true                // Enable/disable tool installation
+  version?:    #Version                   // Version override
+  package?:    #Package                   // runtime:tool format (e.g., npm:difit)
+  plugin?:     string                      // Mise plugin to use
+  exe?:        string                      // Executable name (defaults to name)
+  disabled?:   bool                        // Skip installation if true
+  depends?:    [...string]                 // List of tool names (NOT "name@version")
+  preinstall?:  #HookList                   // Tool-specific preinstall hooks
+  postinstall?: #HookList                   // Tool-specific postinstall hooks
 }
 
 // NPM settings
@@ -46,14 +50,9 @@ package miseseq
   experimental?: string
 }
 
-// Main configuration
+// Main configuration - tools is now an ORDERED LIST
 #MiseSeqConfig: {
   defaults?:    #Defaults
-  tools_order?: [...string]
-
-  tools: {
-    [string]: #ToolConfig
-  }
-
+  tools: [...#ToolConfig]                  // ORDERED LIST (not map!)
   settings?: #Settings
 }

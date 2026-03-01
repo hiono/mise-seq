@@ -193,7 +193,8 @@ func runUpgrade(ctx context.Context, cfg *config.Config, client *mise.Client, ru
 	}
 
 	// Upgrade each tool
-	for toolName := range tools {
+	for _, tool := range tools {
+		toolName := tool.Name
 		if verbose {
 			config.Info("Upgrading %s...", toolName)
 		}
@@ -222,16 +223,20 @@ func runList(ctx context.Context, cfg *config.Config, client *mise.Client, verbo
 	if len(order) > 0 {
 		fmt.Println("Installation order:")
 		for i, toolName := range order {
-			tool, ok := tools[toolName]
-			if !ok {
-				continue
+			// Find tool by name
+			var version string
+			for _, tool := range tools {
+				if tool.Name == toolName {
+					version = tool.Version
+					break
+				}
 			}
-			fmt.Printf("  %d. %s @ %s\n", i+1, toolName, tool.Version)
+			fmt.Printf("  %d. %s @ %s\n", i+1, toolName, version)
 		}
 	} else {
 		fmt.Println("Tools:")
-		for toolName, tool := range tools {
-			fmt.Printf("  - %s @ %s\n", toolName, tool.Version)
+		for _, tool := range tools {
+			fmt.Printf("  - %s @ %s\n", tool.Name, tool.Version)
 		}
 	}
 
@@ -268,7 +273,8 @@ func runStatus(ctx context.Context, cfg *config.Config, client *mise.Client, ver
 	}
 
 	fmt.Println("Tools:")
-	for toolName, tool := range tools {
+	for _, tool := range tools {
+		toolName := tool.Name
 		version := tool.Version
 		if version == "" {
 			version = "latest"

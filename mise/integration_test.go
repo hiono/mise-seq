@@ -82,8 +82,9 @@ func TestInstallWithIsolation(t *testing.T) {
 			client := NewClient()
 
 			cfg := &config.Config{
-				Tools: map[string]config.Tool{
-					tt.tool: {
+				Tools: []config.Tool{
+					{
+						Name:        tt.tool,
 						Version:     "latest",
 						Preinstall:  tt.preinstall,
 						Postinstall: tt.postinstall,
@@ -148,8 +149,9 @@ func TestUpgradeWithIsolation(t *testing.T) {
 	client := NewClient()
 
 	cfg := &config.Config{
-		Tools: map[string]config.Tool{
-			"fzf": {
+		Tools: []config.Tool{
+			{
+				Name:    "fzf",
 				Version: "latest",
 				Postinstall: []config.Hook{
 					{Run: "echo UPGRADE_POSTINSTALL_TEST"},
@@ -207,8 +209,8 @@ func TestIsManagedByMiseIsolation(t *testing.T) {
 	}
 
 	cfg := &config.Config{
-		Tools: map[string]config.Tool{
-			"jq": {Version: "latest"},
+		Tools: []config.Tool{
+			{Name: "jq", Version: "latest"},
 		},
 	}
 
@@ -256,8 +258,9 @@ func TestPreinstallHookExecution(t *testing.T) {
 	client := NewClient()
 
 	cfg := &config.Config{
-		Tools: map[string]config.Tool{
-			"fzf": {
+		Tools: []config.Tool{
+			{
+				Name:    "fzf",
 				Version: "latest",
 				Preinstall: []config.Hook{
 					{
@@ -326,8 +329,9 @@ func TestPostinstallHookExecution(t *testing.T) {
 	postinstallScript := "echo POSTINSTALL_SUCCESS"
 
 	cfg := &config.Config{
-		Tools: map[string]config.Tool{
-			"fzf": {
+		Tools: []config.Tool{
+			{
+				Name:    "fzf",
 				Version: "latest",
 				Preinstall: []config.Hook{
 					{Run: preinstallScript},

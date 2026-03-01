@@ -26,9 +26,9 @@ func TestParseToolRef(t *testing.T) {
 }
 
 func TestToolResolver_NoDependencies(t *testing.T) {
-	tools := map[string]Tool{
-		"jq":   {Version: "latest"},
-		"node": {Version: "20"},
+	tools := []Tool{
+		{Name: "jq", Version: "latest"},
+		{Name: "node", Version: "20"},
 	}
 
 	resolver := NewToolResolver(tools)
@@ -44,9 +44,10 @@ func TestToolResolver_NoDependencies(t *testing.T) {
 }
 
 func TestToolResolver_SimpleDependency(t *testing.T) {
-	tools := map[string]Tool{
-		"nodejs": {Version: "20"},
-		"pnpm": {
+	tools := []Tool{
+		{Name: "nodejs", Version: "20"},
+		{
+			Name:    "pnpm",
 			Version: "latest",
 			Depends: []string{"nodejs@20"},
 		},
@@ -85,11 +86,11 @@ func TestToolResolver_SimpleDependency(t *testing.T) {
 }
 
 func TestToolResolver_ChainDependency(t *testing.T) {
-	tools := map[string]Tool{
-		"gcc":   {Version: "latest"},
-		"go":    {Version: "1.22", Depends: []string{"gcc@latest"}},
-		"rust":  {Version: "1.88", Depends: []string{"gcc@latest"}},
-		"cargo": {Version: "latest", Depends: []string{"rust@1.88"}},
+	tools := []Tool{
+		{Name: "gcc", Version: "latest"},
+		{Name: "go", Version: "1.22", Depends: []string{"gcc@latest"}},
+		{Name: "rust", Version: "1.88", Depends: []string{"gcc@latest"}},
+		{Name: "cargo", Version: "latest", Depends: []string{"rust@1.88"}},
 	}
 
 	resolver := NewToolResolver(tools)
@@ -132,10 +133,10 @@ func TestToolResolver_ChainDependency(t *testing.T) {
 }
 
 func TestToolResolver_CycleDetection(t *testing.T) {
-	tools := map[string]Tool{
-		"a": {Depends: []string{"b"}},
-		"b": {Depends: []string{"c"}},
-		"c": {Depends: []string{"a"}}, // cycle!
+	tools := []Tool{
+		{Name: "a", Depends: []string{"b"}},
+		{Name: "b", Depends: []string{"c"}},
+		{Name: "c", Depends: []string{"a"}},
 	}
 
 	resolver := NewToolResolver(tools)
@@ -147,8 +148,8 @@ func TestToolResolver_CycleDetection(t *testing.T) {
 }
 
 func TestToolResolver_UnknownDependency(t *testing.T) {
-	tools := map[string]Tool{
-		"jq": {Depends: []string{"unknown@latest"}},
+	tools := []Tool{
+		{Name: "jq", Depends: []string{"unknown@latest"}},
 	}
 
 	resolver := NewToolResolver(tools)
@@ -173,9 +174,9 @@ func TestValidateDependencies(t *testing.T) {
 		{
 			name: "valid dependencies",
 			cfg: &Config{
-				Tools: map[string]Tool{
-					"nodejs": {Version: "20"},
-					"pnpm":   {Depends: []string{"nodejs@20"}},
+				Tools: []Tool{
+					{Name: "nodejs", Version: "20"},
+					{Name: "pnpm", Depends: []string{"nodejs@20"}},
 				},
 			},
 			expectErr: false,
@@ -183,8 +184,8 @@ func TestValidateDependencies(t *testing.T) {
 		{
 			name: "unknown dependency",
 			cfg: &Config{
-				Tools: map[string]Tool{
-					"pnpm": {Depends: []string{"nodejs@20"}},
+				Tools: []Tool{
+					{Name: "pnpm", Depends: []string{"nodejs@20"}},
 				},
 			},
 			expectErr: true,

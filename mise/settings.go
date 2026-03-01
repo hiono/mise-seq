@@ -60,12 +60,13 @@ func GetToolHooks(cfg *config.Config, toolName string) (preinstall, postinstall 
 		return nil, nil
 	}
 
-	tool, exists := cfg.Tools[toolName]
-	if !exists {
-		return nil, nil
+	for _, tool := range cfg.Tools {
+		if tool.Name == toolName {
+			return tool.Preinstall, tool.Postinstall
+		}
 	}
 
-	return tool.Preinstall, tool.Postinstall
+	return nil, nil
 }
 
 // HasDefaults checks if config has default hooks

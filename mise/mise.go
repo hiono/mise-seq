@@ -437,9 +437,23 @@ func (c *Client) List(ctx context.Context) error {
 // InstallWithHooks installs a tool with preinstall/postinstall hooks
 func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolName string) error {
 	hookRunner := hooks.NewRunner(false)
-	tool, exists := cfg.Tools[toolName]
-	if !exists {
+
+	// Find tool in slice
+	var tool *config.Tool
+	for i := range cfg.Tools {
+		if cfg.Tools[i].Name == toolName {
+			tool = &cfg.Tools[i]
+			break
+		}
+	}
+	if tool == nil {
 		return fmt.Errorf("tool %s not found in config", toolName)
+	}
+
+	// Check if disabled
+	if tool.Disabled {
+		config.Info("Tool %s is disabled, skipping", toolName)
+		return nil
 	}
 
 	// Add plugin if specified
@@ -532,29 +546,32 @@ func (c *Client) InstallWithHooks(ctx context.Context, cfg *config.Config, toolN
 
 // InstallAllWithHooks installs all tools from config with hooks, respecting tools_order and dependencies
 func (c *Client) InstallAllWithHooks(ctx context.Context, cfg *config.Config, runPostinstallOnUpdate bool) error {
-	toolOrder := config.GetToolOrder(cfg)
 	tools := config.GetTools(cfg)
 
-	// Determine installation order
-	var installOrder []string
-
-	if len(toolOrder) > 0 {
-		// Use tools_order if specified
-		installOrder = toolOrder
-	} else {
-		// Use dependency resolver
-		resolver := config.NewToolResolver(tools)
-		var err error
-		installOrder, err = resolver.ResolveOrder()
-		if err != nil {
-			return fmt.Errorf("failed to resolve dependency order: %w", err)
-		}
+	// Determine installation order - tools list is already ordered
+	// So we just extract names in list order
+	installOrder := make([]string, len(tools))
+	for i, tool := range tools {
+		installOrder[i] = tool.Name
 	}
 
 	// Install in determined order
 	for _, name := range installOrder {
-		tool, exists := tools[name]
-		if !exists {
+		// Find tool in slice
+		var tool *config.Tool
+		for i := range tools {
+			if tools[i].Name == name {
+				tool = &tools[i]
+				break
+			}
+		}
+		if tool == nil {
+			continue
+		}
+
+		// Skip disabled tools
+		if tool.Disabled {
+			config.Info("Tool %s is disabled, skipping", name)
 			continue
 		}
 

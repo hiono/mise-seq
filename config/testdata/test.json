@@ -1,15 +1,16 @@
 {
-  "tools_order": ["go", "node", "python"],
-  "tools": {
-    "go": {
+  "tools": [
+    {
+      "name": "go",
       "version": "1.21",
       "exe": "go"
     },
-    "node": {
+    {
+      "name": "node",
       "version": "20",
       "exe": "node"
     }
-  },
+  ],
   "defaults": {
     "preinstall": [
       {
