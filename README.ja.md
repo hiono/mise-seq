@@ -13,6 +13,7 @@ miseを使用したツールインストールをGoライブラリ・CLIとし�
 - マルチフォーマット対応: JSON、YAML、TOML、CUE
 - 統一Loader API: フォーマット自動検出
 - mise CLIラッパー: インストール、アップグレード、リスト、ステータス
+- プラグイン対応: インストール前にmiseプラグインを自動追加
 - フック対応: インストール前後にスクリプト実行
 - SHA256ステート管理: 未変更のフックをスキップ
 - 順序付きインストール: tools_orderに従う
@@ -104,10 +105,14 @@ tools:
     version: latest
   lazygit:
     version: latest
+  glab:
+    version: latest
+    plugin: glab  # インストール前にmiseプラグインを追加
 
 tools_order:
   - jq
   - lazygit
+  - glab
 
 defaults:
   preinstall:
@@ -171,13 +176,14 @@ MiseSeqConfig: {
 
 ## 設定リファレンス
 
-フィールドは特記がない限り省略可能。
+フィールドは省略可能。
 
 ### ツールフィールド
 
 | フィールド | 型 | デフォルト | 説明 |
 |-----------|-----|-----------|------|
 | version | string | "latest" | ツールバージョン |
+| plugin | string | - | インストール前に追加するmiseプラグイン (例: "glab") |
 | exe | string | ツールキー | 実行ファイル名 |
 | depends | array | [] | 依存関係 |
 | preinstall | array | [] | インストール前フック |
@@ -204,9 +210,9 @@ tools:
 ```
 
 ポイント:
-- @version省略時は@latest
-- version省略時は"latest"
-- exe省略時はツールキー名
+- @version、省略時は@latest
+- version、省略時は"latest"
+- exe、省略時はツールキー名
 
 ---
 
@@ -214,14 +220,14 @@ tools:
 
 ### フックタイプ
 
-- preinstall: インストール前に実行
-- postinstall: インストール後に実行
+preinstall: インストール前に実行
+postinstall: インストール後に実行
 
 ### 実行タイミング
 
-- install: 初回インストールのみ
-- update: バージョン更新時のみ
-- always: 常に実行
+install: 初回のみ
+update: バージョン更新時のみ
+always: 常に実行
 
 ### フック例
 
@@ -241,7 +247,7 @@ tools:
 
 ### デフォルトフック
 
-全ツールに適用:
+全ツールにフックを適用:
 
 ```yaml
 defaults:
@@ -253,12 +259,12 @@ defaults:
 
 ### ステート管理
 
-SHA256マーカーでフックの変更を検出:
+SHA256マーカーで変更を検出:
 
-- 初実行: フックを実行、SHA256を保存
-- 以降: SHA256を比較、変更なければスキップ
-- --force-hooks: 強制実行
-- --postinstall-on-update: 更新時にpostinstallを実行
+初実行: フックを実行、SHA256を保存
+以降: SHA256を比較、変化なければスキップ
+--force-hooks: 強制実行
+--postinstall-on-update: 更新時にpostinstallを実行
 
 ---
 
@@ -268,16 +274,16 @@ SHA256マーカーでフックの変更を検出:
 
 | コマンド | 説明 |
 |---------|------|
-| install | 全ツールをインストール（デフォルト） |
-| upgrade | インストール済みツールをアップグレード |
-| list | インストール済みツールを一覧表示 |
+| install | 全ツールをインストール |
+| upgrade | ツールをアップグレード |
+| list | ツールを一覧表示 |
 | status | 設定ツールの状態を表示 |
 
 ### グローバルフラグ
 
 | フラグ | 説明 |
 |--------|------|
-| -c <file> | 設定ファイル（デフォルト: tools.yaml） |
+| -c <file> | 設定ファイル |
 | --dry-run | ドライラン |
 | --force-hooks | フックを強制実行 |
 | --postinstall-on-update | 更新時にpostinstallを実行 |
@@ -380,14 +386,14 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 ## 前提条件
 
-- Go 1.21以上
+Go 1.21以上
 
 ### mise未安装時の動作
 
-miseがシステムにインストールされていない場合：
-- ~/.local/bin/mise に自動ダウンロード
-- ダウンロード後、自動的にPATHに追加
-- 以降のコマンドでmiseが利用可能
+miseがシステムにインストールされていない場合:
+~/.local/bin/mise に自動ダウンロード
+ダウンロード後、自動的にPATHに追加
+以降のコマンドでmiseが利用可能
 
 **インストール後、シェルを再起動するか以下を実行:**
 

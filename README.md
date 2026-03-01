@@ -10,15 +10,16 @@ A Go library and CLI for tool installation using mise.
 
 ## Features
 
-- **Multi-format config loading**: JSON, YAML, TOML, CUE
-- **Unified Loader API**: Auto-detect format and parse with single call
-- **mise CLI wrapper**: Install, upgrade, list, status tools with Go
-- **Hook support**: Run preinstall/postinstall hooks during tool installation
-- **SHA256 state management**: Skip hooks if unchanged (with force option)
-- **Ordered installation**: Respect `tools_order` for sequential installs
-- **Defaults**: Apply default hooks to all tools
-- **Settings**: Apply mise settings (npm, experimental)
-- **CLI subcommands**: install, upgrade, list, status
+- Multi-format config loading: JSON, YAML, TOML, CUE
+- Unified Loader API: auto-detects format
+- mise CLI wrapper: install, upgrade, list, status tools
+- Plugin support: adds mise plugins before installation
+- Hook support: runs scripts before/after installation
+- SHA256 state management: skips unchanged hooks
+- Ordered installation: respects tools_order
+- Defaults: applies hooks to all tools
+- Settings: configures mise (npm, experimental)
+- CLI subcommands: install, upgrade, list, status
 
 ---
 
@@ -106,10 +107,14 @@ tools:
     version: latest
   lazygit:
     version: latest
+  glab:
+    version: latest
+    plugin: glab  # Add mise plugin before installation
 
 tools_order:
   - jq
   - lazygit
+  - glab
 
 defaults:
   preinstall:
@@ -171,13 +176,14 @@ MiseSeqConfig: {
 
 ### Configuration Reference
 
-All fields are **optional** unless marked as **required**.
+All fields are optional unless marked as required.
 
 #### Tool Fields
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `version` | string | No | `"latest"` | Tool version (e.g., `"1.22"`, `"latest"`, `""`) |
+| `plugin` | string | No | - | mise plugin to add before installation (e.g., `"glab"` for GitLab CLI) |
 | `exe` | string | No | `<tool name>` | Executable name (if different from tool key) |
 | `depends` | array | No | `[]` | Dependencies: `["tool@version"]` or `["tool"]` (= latest) |
 | `preinstall` | array | No | `[]` | Hooks to run before installation |
@@ -204,10 +210,9 @@ tools:
 ```
 
 **Key Points:**
-- `@version` can be omitted → defaults to `@latest`
-- `version` field can be omitted → defaults to `"latest"` 
-- `exe` field can be omitted → defaults to tool key name
-- Empty array `[]` is equivalent to omitted field
+- @version defaults to @latest
+- version field defaults to "latest" 
+- exe field defaults to tool key name
 
 #### Minimal Configuration (All Omitted)
 
@@ -407,22 +412,22 @@ runner := hooks.NewRunnerWithOptions(false, "/custom/state", true, false)
 
 ## Prerequisites
 
-- Go 1.21+
+Go 1.21+
 
 ### Auto-install behavior
 
-If mise is not installed on the system:
-- Automatically downloads mise to ~/.local/bin/mise
-- Adds to PATH automatically after download
+If mise is not installed:
+- Downloads mise to ~/.local/bin/mise
+- Adds to PATH after download
 - mise becomes available for subsequent commands
 
-**After installation, restart your shell or run:**
+**After installation, restart your shell:**
 
 ```bash
 exec $SHELL
 ```
 
-Then verify with: `mise --version`
+Verify with: `mise --version`
 
 ---
 

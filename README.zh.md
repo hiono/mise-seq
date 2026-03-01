@@ -10,15 +10,16 @@ Go 库和 CLI 工具，用于使用 mise 安装工具。
 
 ## 功能
 
-- **多格式配置支持**: JSON、YAML、TOML、CUE
-- **统一 Loader API**: 自动检测格式并解析
-- **mise CLI 包装器**: 安装、升级、列出、状态检查
-- **钩子支持**: 安装前后执行钩子
-- **SHA256 状态管理**: 跳过未更改的钩子（支持强制选项）
-- **顺序安装**: 尊重 `tools_order` 的安装顺序
-- **Defaults**: 为所有工具应用默认钩子
-- **Settings**: 应用 mise 设置 (npm, experimental)
-- **CLI 子命令**: install、upgrade、list、status
+- 多格式配置支持: JSON、YAML、TOML、CUE
+- 统一 Loader API: 自动检测格式
+- mise CLI 包装器: 安装、升级、列出、状态检查
+- 插件支持: 安装前自动添加 mise 插件
+- 钩子支持: 安装前后执行钩子
+- SHA256 状态管理: 跳过未更改的钩子
+- 顺序安装: 尊重 tools_order
+- Defaults: 为所有工具应用钩子
+- Settings: 配置 mise (npm, experimental)
+- CLI 子命令: install、upgrade、list、status
 
 ---
 
@@ -106,10 +107,14 @@ tools:
     version: latest
   lazygit:
     version: latest
+  glab:
+    version: latest
+    plugin: glab
 
 tools_order:
   - jq
   - lazygit
+  - glab
 
 defaults:
   preinstall:
@@ -175,9 +180,10 @@ MiseSeqConfig: {
 
 #### 工具字段
 
-| 字段 | 类型 | 必填 | 默认值 | 说明 |
+| 字段 | 类型 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | `version` | string | 否 | `"latest"` | 工具版本（如 `"1.22"`, `"latest"`, `""`） |
+| `plugin` | string | 否 | - | 安装前要添加的mise插件（如 `"glab"`） |
 | `exe` | string | 否 | `<工具名>` | 可执行文件名（与工具键名不同时） |
 | `depends` | array | 否 | `[]` | 依赖: `["tool@version"]` 或 `["tool"]`（= latest） |
 | `preinstall` | array | 否 | `[]` | 安装前运行的钩子 |
